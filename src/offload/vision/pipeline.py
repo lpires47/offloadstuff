@@ -28,6 +28,7 @@ AUTOFILL_MIN_CONFIDENCE = {
     "size": 0.9,
     "condition": 0.7,
     "gender": 0.8,
+    "material": 0.7,
 }
 
 # Fields a listing can't go live without, by category. Size is required where buyers filter on it.
@@ -61,7 +62,8 @@ class ItemAnalysis:
 
     @property
     def ready_to_list(self) -> bool:
-        return not self.missing
+        # High authenticity risk always goes to a person, never straight to a listing.
+        return not self.missing and self.identification.authenticity_risk != "high"
 
 
 @dataclass
@@ -78,6 +80,8 @@ def _field_confidence(ident: Identification, name: str) -> tuple[bool, float]:
     if name == "gender":
         known = ident.gender not in ("unknown",)
         return known, ident.gender_confidence
+    if name == "material":
+        return ident.material.value is not None, ident.material.confidence
     attr = getattr(ident, name)
     return attr.value is not None and str(attr.value).strip() != "", attr.confidence
 
@@ -95,22 +99,24 @@ def assess(ident: Identification) -> tuple[list[str], list[str], list[PhotoReque
         elif has and conf < threshold:
             low.append(name)
 
-    requests: list[PhotoRequest] = []
+    # Every missing required field gets the shot that resolves it, whatever the count: those block
+    # listing. Optional asks (authenticity, the model's own suggestions) only fill up to two in total.
+    required_asks: list[PhotoRequest] = []
     seen: set[str] = set()
     for name in missing:
         shot, reason = SHOT_FOR_FIELD[name]
         if shot not in seen:
-            requests.append(PhotoRequest(shot=shot, reason=reason))
+            required_asks.append(PhotoRequest(shot=shot, reason=reason))
             seen.add(shot)
+    optional: list[PhotoRequest] = []
     if ident.authenticity_risk in ("check", "high") and "brand_tag" not in seen:
-        requests.append(PhotoRequest(shot="brand_tag", reason="To check authenticity"))
+        optional.append(PhotoRequest(shot="brand_tag", reason="To check authenticity"))
         seen.add("brand_tag")
-    # Keep the model's own asks too, but cap the total: one extra photo is the product promise, not five.
     for req in ident.photo_requests:
         if req.shot not in seen:
-            requests.append(req)
+            optional.append(req)
             seen.add(req.shot)
-    return missing, low, requests[:2]
+    return missing, low, required_asks + optional[: max(0, 2 - len(required_asks))]
 
 
 def identify_item(
@@ -159,11 +165,20 @@ def _outlined(photo: Photo, box: Box) -> Photo:
     return Photo(img, photo.sha256, photo.source + "#overview")
 
 
-def _dedupe(items: list[DetectedItem], iou_threshold: float = 0.7) -> list[DetectedItem]:
+def box_of(item: DetectedItem, photo: Photo | None = None) -> Box:
+    """The item's box on the 0-1000 grid. If the model answered in pixels by mistake, rescale."""
+    coords = (item.x0, item.y0, item.x1, item.y1)
+    if photo is not None and max(coords) > 1000:
+        w, h = photo.size
+        coords = (item.x0 * 1000 / w, item.y0 * 1000 / h, item.x1 * 1000 / w, item.y1 * 1000 / h)
+    return Box.clamp(*coords)
+
+
+def _dedupe(items: list[DetectedItem], photo: Photo, iou_threshold: float = 0.7) -> list[DetectedItem]:
     kept: list[DetectedItem] = []
     for item in items:
-        box = Box.clamp(item.x0, item.y0, item.x1, item.y1)
-        if all(box.iou(Box.clamp(k.x0, k.y0, k.x1, k.y1)) < iou_threshold for k in kept):
+        box = box_of(item, photo)
+        if all(box.iou(box_of(k, photo)) < iou_threshold for k in kept):
             kept.append(item)
     return kept
 
@@ -184,7 +199,7 @@ def analyze_photo(
     """One photo of one item or a pile -> an analysis per item. No mode switch: the photo decides."""
     cfg = cfg or default_settings()
     detection = detect_items(photo, llm, cfg)
-    candidates = _dedupe([i for i in detection.items if i.is_for_sale_candidate])
+    candidates = _dedupe([i for i in detection.items if i.is_for_sale_candidate], photo)
     skipped = [i for i in detection.items if not i.is_for_sale_candidate]
 
     if detection.scene == "no_items" or not candidates:
@@ -195,7 +210,7 @@ def analyze_photo(
         return PhotoAnalysis(detection, [_finish(candidates[0], ident, [photo])], skipped)
 
     def work(item: DetectedItem) -> ItemAnalysis:
-        box = Box.clamp(item.x0, item.y0, item.x1, item.y1)
+        box = box_of(item, photo)
         crop = photo.crop(box)
         ident = identify_item([crop], llm, overview=_outlined(photo, box), cfg=cfg)
         return _finish(item, ident, [crop])

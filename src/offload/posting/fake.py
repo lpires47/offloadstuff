@@ -69,6 +69,9 @@ class FakePlatform:
                 nxt = min(buyer.max_cents, offer.amount_cents + buyer.step_cents)
                 self._queue.append(OfferEvent(listing.listing_id, self._offer(listing, buyer, nxt, offer.received_at)))
 
+    def cancel_order(self, listing: PlatformListing, order_id: str | None) -> None:
+        self.log.append(f"cancelled order on {listing.listing_id}")
+
     def send_message(self, listing: PlatformListing, thread_id: str, text: str) -> None:
         self.log.append(f"message {thread_id} :: {text}")
 

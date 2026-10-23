@@ -34,12 +34,8 @@ class Box:
     def clamp(cls, x0: float, y0: float, x1: float, y1: float) -> "Box":
         x0, x1 = sorted((x0, x1))
         y0, y1 = sorted((y0, y1))
-        x0, y0 = max(0, int(x0)), max(0, int(y0))
-        x1, y1 = min(GRID, int(round(x1))), min(GRID, int(round(y1)))
-        if x1 <= x0:
-            x1 = min(GRID, x0 + 1)
-        if y1 <= y0:
-            y1 = min(GRID, y0 + 1)
+        x0, y0 = min(max(0, int(x0)), GRID - 1), min(max(0, int(y0)), GRID - 1)
+        x1, y1 = min(GRID, max(int(round(x1)), x0 + 1)), min(GRID, max(int(round(y1)), y0 + 1))
         return cls(x0, y0, x1, y1)
 
     @property

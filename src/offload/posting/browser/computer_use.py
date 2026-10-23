@@ -109,8 +109,10 @@ def _as_dict(block: Any) -> dict:
 
 def _host_allowed(url: str, allowed: tuple[str, ...]) -> bool:
     parsed = urlparse(url)
-    if parsed.scheme in ("about", "data") or url == "about:blank":
+    if url == "about:blank":
         return True
+    if parsed.scheme in ("data", "javascript", "blob"):
+        return False
     if parsed.scheme == "file":
         return "file" in allowed
     host = (parsed.hostname or "").lower()
@@ -126,14 +128,13 @@ def _trim_screenshots(messages: list[dict], keep: int) -> None:
         for block in reversed(msg["content"]):
             if block.get("type") != "tool_result" or not isinstance(block.get("content"), list):
                 continue
-            new = []
-            for part in block["content"]:
-                if part.get("type") == "image":
+            parts = list(block["content"])
+            for idx in range(len(parts) - 1, -1, -1):  # newest last: walk backwards to keep the newest
+                if parts[idx].get("type") == "image":
                     seen += 1
                     if seen > keep:
-                        part = {"type": "text", "text": "[older screenshot removed]"}
-                new.append(part)
-            block["content"] = new
+                        parts[idx] = {"type": "text", "text": "[older screenshot removed]"}
+            block["content"] = parts
 
 
 @dataclass
@@ -147,9 +148,26 @@ class ComputerUseRunner:
     keep_screenshots: int = 3
     executor: Executor | None = None
 
+    def _install_guards(self, task: BrowserTask, blocked: list[str]) -> None:
+        """Block disallowed navigations BEFORE the request leaves, in every tab, and close stray pop-ups."""
+        context = self.page.context
+
+        def route(r):
+            req = r.request
+            if req.is_navigation_request() and not _host_allowed(req.url, task.allowed_domains):
+                blocked.append(req.url)
+                return r.abort()
+            return r.continue_()
+
+        context.route("**/*", route)
+        context.on("page", lambda pg: pg.close() if pg is not self.page else None)
+
     def run(self, task: BrowserTask) -> TaskResult:
         cfg = self.cfg or default_settings()
         ex = self.executor or Executor(self.page)
+        blocked: list[str] = []
+        self._install_guards(task, blocked)
+        approved_once = False
         if task.files:
             self.page.on("filechooser", lambda chooser: chooser.set_files(list(task.files)))
         if task.start_url:
@@ -182,14 +200,28 @@ class ComputerUseRunner:
                 name, args, tid = use["name"], use.get("input") or {}, use["id"]
                 is_computer = use.get("toolset_name") == "computer"
                 if name == "report_done":
+                    if failed:
+                        results.append({"type": "tool_result", "tool_use_id": tid, "is_error": True,
+                                        "content": "Not accepted: an earlier action in this turn failed. Check the screen first."})
+                        continue
+                    if task.approval_steps and not approved_once:
+                        results.append({"type": "tool_result", "tool_use_id": tid, "is_error": True,
+                                        "content": "Not accepted: this task needs ask_user approval before: " + "; ".join(task.approval_steps)})
+                        continue
                     return TaskResult("done", args.get("summary", ""), args.get("result") or {}, steps=step, actions=audit)
                 if name == "report_blocked":
                     return TaskResult("blocked", args.get("reason", ""), needs_user=bool(args.get("needs_user")), steps=step, actions=audit)
                 if name == "ask_user":
+                    if failed:
+                        results.append({"type": "tool_result", "tool_use_id": tid, "is_error": True, "content": NOT_EXECUTED})
+                        continue
                     ok = bool(self.approve(args.get("action_summary", "")))
                     audit.append({"ask_user": args.get("action_summary"), "approved": ok})
+                    approved_once = approved_once or ok
                     text = "The owner APPROVED. Proceed." if ok else "The owner DECLINED. Do not do it; call report_blocked."
                     results.append({"type": "tool_result", "tool_use_id": tid, "content": text})
+                    if not ok:
+                        failed = True  # nothing else in this turn runs after a "no"
                     continue
                 if not is_computer:
                     results.append({"type": "tool_result", "tool_use_id": tid, "is_error": True, "content": f"unknown tool {name}"})
@@ -198,10 +230,15 @@ class ComputerUseRunner:
                     results.append({"type": "tool_result", "tool_use_id": tid, "toolset_name": "computer", "is_error": True, "content": NOT_EXECUTED})
                     continue
                 try:
+                    n_blocked = len(blocked)
                     out = ex.run(name, args)
+                    if len(blocked) > n_blocked:
+                        raise ActionError(f"navigation to {urlparse(blocked[-1]).hostname or blocked[-1]} is not allowed for this task; it was blocked")
                     if not _host_allowed(self.page.url, task.allowed_domains):
                         bad = self.page.url
                         self.page.go_back()
+                        if not _host_allowed(self.page.url, task.allowed_domains):
+                            return TaskResult("failed", f"left the allowed sites ({bad}) and could not return", steps=step, actions=audit)
                         raise ActionError(f"navigation to {urlparse(bad).hostname or bad} is not allowed for this task; went back")
                     audit.append({"action": name, "input": args, "url": self.page.url})
                     results.append({"type": "tool_result", "tool_use_id": tid, "toolset_name": "computer", "content": out})

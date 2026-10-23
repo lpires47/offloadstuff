@@ -78,7 +78,7 @@ def test_ebay_adapter_request_shapes():
     assert offer_body["pricingSummary"]["price"] == {"currency": "USD", "value": "149.00"}
     assert offer_body["listingPolicies"]["bestOfferTerms"]["autoDeclinePrice"]["value"] == "89.00"
     item = json.loads(next(c for m, path, c in seen if "/inventory_item/" in path))
-    assert item["condition"] == "USED_VERY_GOOD" and item["product"]["aspects"]["Brand"] == ["Arc'teryx"]
+    assert item["condition"] == "PRE_OWNED_EXCELLENT" and item["product"]["aspects"]["Brand"] == ["Arc'teryx"]
 
     ad.respond_to_offer(pl, Offer("ebay-BO9", "ebay", "b", 12000, T0), Decision("counter", "ebay-BO9", 13000, "x"), "Can do $130 & ship fast")
     xml = seen[-1][2].decode()

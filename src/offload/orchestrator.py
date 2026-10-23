@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Literal
 
 from .listing.compose import ListingDraft
@@ -18,14 +18,14 @@ from .negotiation.arbiter import pick
 from .negotiation.guard import check_buyer_message
 from .negotiation.messages import draft_reply, template
 from .negotiation.models import Decision, Offer, Terms, Thread
-from .negotiation.policy import decide, record
+from .negotiation.policy import decide, effective_floor, platform_list_price, record
 from .negotiation.schedule import next_drop
 from .posting.base import MessageEvent, OfferEvent, PlatformAdapter, PlatformListing, SaleEvent
 
 
 @dataclass
 class UserPrompt:
-    kind: Literal["confirm_sale", "offer_below_minimum", "buyer_question", "sold", "blocked_scam"]
+    kind: Literal["confirm_sale", "offer_below_minimum", "buyer_question", "sold", "blocked_scam", "double_sale", "already_sold"]
     text: str
     offer: Offer | None = None
     platform: str | None = None
@@ -51,37 +51,54 @@ class SellJob:
     sold: SaleEvent | None = None
     last_price_change: datetime | None = None
     last_offer_at: datetime | None = None
+    posted_at: datetime | None = None
+    offer_ttl: timedelta = timedelta(hours=48)  # eBay Best Offers lapse after 48h; others similar or shorter
+    after_sale_watch: timedelta = timedelta(hours=24)  # keep watching delisted listings for a racing second sale
 
     # ---- posting ----
     def post(self, now: datetime) -> None:
-        public = self.draft.public_view()
-        public["package"] = vars(self.draft.package)
-        public["search_query"] = self.draft.search_query
+        base = self.draft.public_view()
+        base["package"] = vars(self.draft.package)
+        base["search_query"] = self.draft.search_query
         for name, adapter in self.adapters.items():
-            self.listings[name] = adapter.create_listing(dict(public), photos=self.photos)
-            self.log(f"[{name}] live at ${self.draft.list_cents / 100:.0f}")
+            listing = dict(base)
+            listing["price_cents"] = platform_list_price(self.terms, name)
+            # Let the platform handle the clear cases natively where it can (eBay Best Offer thresholds).
+            listing["best_offer"] = {
+                "auto_accept_cents": max(effective_floor(self.terms, name), round(self.terms.accept_at * listing["price_cents"] / self.terms.list_cents)),
+                "auto_decline_cents": round(self.terms.list_cents * self.terms.lowball_ratio),
+            }
+            self.listings[name] = adapter.create_listing(listing, photos=self.photos)
+            self.log(f"[{name}] live at ${listing['price_cents'] / 100:.0f}")
         self.last_price_change = now
-
-    @property
-    def current_ask(self) -> int:
-        live = [l.price_cents for l in self.listings.values() if l.status == "live"]
-        return min(live) if live else self.terms.list_cents
+        self.posted_at = now
 
     # ---- the loop ----
     def tick(self, now: datetime) -> list[UserPrompt]:
-        if self.sold:
-            return []
         prompts: list[UserPrompt] = []
+        events = []
         for name, listing in list(self.listings.items()):
-            if listing.status != "live":
-                continue
-            for event in self.adapters[name].poll(listing, None):
-                if isinstance(event, SaleEvent):
-                    return prompts + self._close_out(event)
-                if isinstance(event, OfferEvent):
-                    prompts += self._on_offer(listing, event.offer, now)
-                elif isinstance(event, MessageEvent):
-                    prompts += self._on_message(listing, event)
+            watching = listing.status == "live" or (
+                self.sold is not None and listing.status == "delisted" and now - self.sold.at < self.after_sale_watch
+            )
+            if watching:
+                events += [(listing, e) for e in self.adapters[name].poll(listing, self.posted_at)]
+        # Sales first: a sale anywhere changes what every other event means.
+        for listing, event in [x for x in events if isinstance(x[1], SaleEvent)]:
+            prompts += self._close_out(event)
+        if self.sold:
+            return prompts
+        for listing, event in events:
+            if isinstance(event, OfferEvent):
+                prompts += self._on_offer(listing, event.offer, now)
+            elif isinstance(event, MessageEvent):
+                prompts += self._on_message(listing, event)
+
+        for oid, o in list(self.acceptable.items()):
+            if now - o.received_at > self.offer_ttl:
+                del self.acceptable[oid]
+        if not self.acceptable:
+            self.first_acceptable_at = None
 
         if not self.pending_confirmation:
             choice = pick(
@@ -164,6 +181,14 @@ class SellJob:
     # ---- the seller's answers ----
     def confirm_sale(self, offer: Offer, now: datetime) -> list[UserPrompt]:
         listing = self.listings[offer.platform]
+        if self.sold is not None or listing.status != "live":
+            self.pending_confirmation = None
+            return [UserPrompt("already_sold", "This item already sold, so that offer can't be accepted.", offer, offer.platform)]
+        # Take it down everywhere else BEFORE accepting, so an open counter can't be taken meanwhile.
+        for name, other in self.listings.items():
+            if name != offer.platform and other.status == "live":
+                self.adapters[name].delist(other)
+                other.status = "delisted"
         decision = Decision("accept", offer.id, offer.amount_cents, "seller confirmed")
         self._send(listing, offer, decision, self._thread(offer))
         return self._close_out(SaleEvent(listing.listing_id, offer.platform, offer.buyer_id, offer.amount_cents, now))
@@ -171,6 +196,10 @@ class SellJob:
     def hold_out(self, offer: Offer) -> None:
         self.acceptable.pop(offer.id, None)
         self.pending_confirmation = None
+        if not self.acceptable:
+            self.first_acceptable_at = None
+        if self.sold is not None or self.listings[offer.platform].status != "live":
+            return
         listing = self.listings[offer.platform]
         decision = Decision("decline", offer.id, None, "seller wants to hold out")
         self.adapters[offer.platform].respond_to_offer(listing, offer, decision, template(decision))
@@ -183,6 +212,22 @@ class SellJob:
 
     # ---- endings ----
     def _close_out(self, sale: SaleEvent) -> list[UserPrompt]:
+        if self.sold is not None:
+            if (sale.platform, sale.listing_id) == (self.sold.platform, self.sold.listing_id):
+                return []
+            self.log(f"DOUBLE SALE: {sale.platform} also sold for ${sale.price_cents / 100:.0f}")
+            adapter = self.adapters[sale.platform]
+            cancel = getattr(adapter, "cancel_order", None)
+            done = False
+            if cancel is not None:
+                try:
+                    cancel(self.listings[sale.platform], sale.order_id)
+                    done = True
+                except Exception as exc:
+                    self.log(f"  cancel failed: {exc}")
+            text = (f"It also sold on {sale.platform}. " + ("We cancelled that order as out of stock; the buyer is refunded."
+                    if done else "Please cancel that order as out of stock.") + " Don't ship it.")
+            return [UserPrompt("double_sale", text, platform=sale.platform)]
         self.sold = sale
         for name, listing in self.listings.items():
             if name == sale.platform:
@@ -204,7 +249,7 @@ class SellJob:
         for name, listing in self.listings.items():
             if listing.status != "live":
                 continue
-            drop = next_drop(listing.price_cents, self.terms.floor_cents, speed=self.terms.speed,
+            drop = next_drop(listing.price_cents, effective_floor(self.terms, name), speed=self.terms.speed,
                              days_since_last_change=days, had_offers_recently=recent, platform=name)
             if drop:
                 self.adapters[name].update_price(listing, drop.new_price_cents)

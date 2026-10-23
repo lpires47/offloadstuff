@@ -29,8 +29,20 @@ SCOPES = " ".join(
     for s in ("sell.inventory", "sell.account", "sell.fulfillment", "sell.negotiation")
 )
 
-# Our condition -> eBay ConditionEnum. Valid values depend on the category; apparel categories accept
-# NEW, NEW_OTHER, NEW_WITH_DEFECTS, PRE_OWNED_EXCELLENT, USED_EXCELLENT, PRE_OWNED_FAIR (check per category).
+# Our condition -> eBay ConditionEnum. Valid values depend on the category.
+# Clothing, shoes & accessories accept NEW, NEW_OTHER, NEW_WITH_DEFECTS, PRE_OWNED_EXCELLENT,
+# USED_EXCELLENT (shown as "Pre-owned - Good") and PRE_OWNED_FAIR. Check with the Metadata API per category.
+FASHION_CONDITION = {
+    "new_with_tags": "NEW",
+    "new_without_tags": "NEW_OTHER",
+    "like_new": "PRE_OWNED_EXCELLENT",
+    "very_good": "PRE_OWNED_EXCELLENT",
+    "good": "USED_EXCELLENT",
+    "fair": "PRE_OWNED_FAIR",
+    "poor": "PRE_OWNED_FAIR",
+    "unknown": "USED_EXCELLENT",
+}
+FASHION_CATEGORIES = {"apparel", "footwear", "bags", "accessories"}
 CONDITION = {
     "new_with_tags": "NEW",
     "new_without_tags": "NEW_OTHER",
@@ -43,6 +55,16 @@ CONDITION = {
 }
 ASPECT_NAMES = {"brand": "Brand", "model": "Model", "size": "Size", "color": "Color", "material": "Material",
                 "style_code": "Style Code", "gender": "Department"}
+DEPARTMENT = {"Men's": "Men", "Women's": "Women", "Unisex": "Unisex Adults", "Boys'": "Boys", "Girls'": "Girls", "Baby": "Baby"}
+
+
+def ebay_condition(category: str, condition: str) -> str:
+    table = FASHION_CONDITION if category in FASHION_CATEGORIES else CONDITION
+    return table.get(condition, table["unknown"])
+
+
+def _ebay_time(dt: datetime) -> str:
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
 def _money(cents: int) -> dict:
@@ -125,10 +147,13 @@ class EbayAdapter:
             raise ValueError("eBay needs public https image URLs")
         sku = listing.get("sku") or f"off-{uuid.uuid4().hex[:16]}"
         pkg = listing.get("package") or {}
-        aspects = {ASPECT_NAMES[k]: [v] for k, v in listing.get("attributes", {}).items() if k in ASPECT_NAMES}
+        aspects = {
+            ASPECT_NAMES[k]: [DEPARTMENT.get(v, v) if k == "gender" else v]
+            for k, v in listing.get("attributes", {}).items() if k in ASPECT_NAMES
+        }
         item = {
             "availability": {"shipToLocationAvailability": {"quantity": 1}},
-            "condition": CONDITION.get(listing["condition"], "USED_GOOD"),
+            "condition": ebay_condition(listing.get("category", ""), listing["condition"]),
             "product": {"title": listing["title"][:80], "description": listing["description"], "aspects": aspects, "imageUrls": photos[:24]},
         }
         if pkg:
@@ -168,10 +193,14 @@ class EbayAdapter:
                                extra={"sku": sku, "offer_id": offer_id})
 
     def update_price(self, listing: PlatformListing, price_cents: int) -> None:
-        self._req("POST", "/sell/inventory/v1/bulk_update_price_quantity", json={"requests": [{
+        r = self._req("POST", "/sell/inventory/v1/bulk_update_price_quantity", json={"requests": [{
             "sku": listing.extra["sku"],
             "offers": [{"offerId": listing.extra["offer_id"], "availableQuantity": 1, "price": _money(price_cents)}],
         }]})
+        # HTTP 200 can still carry per-offer failures.
+        for resp in (r.json() or {}).get("responses", []):
+            if resp.get("statusCode") not in (200, None) or resp.get("errors"):
+                raise RuntimeError(f"eBay rejected the price update: {resp}")
         listing.price_cents = price_cents
 
     def delist(self, listing: PlatformListing) -> None:
@@ -194,13 +223,18 @@ class EbayAdapter:
                 binding=True,  # an accepted eBay Best Offer commits the buyer to pay
                 buyer_completed_purchases=int(bo.findtext("e:Buyer/e:FeedbackScore", default="0", namespaces=ns) or 0),
             )))
-        flt = f"creationdate:[{since.isoformat()}..]" if since else None
-        orders = self._req("GET", "/sell/fulfillment/v1/order", params={"filter": flt} if flt else {}).json().get("orders", [])
+        params = {"limit": 200}
+        if since:
+            params["filter"] = f"creationdate:[{_ebay_time(since)}..]"
+        orders = self._req("GET", "/sell/fulfillment/v1/order", params=params).json().get("orders", [])
         for o in orders:
+            if (o.get("cancelStatus") or {}).get("cancelState") in ("CANCELED", "IN_PROGRESS"):
+                continue
             for li in o.get("lineItems", []):
                 if li.get("legacyItemId") == listing.listing_id:
+                    cost = li.get("lineItemCost") or li["total"]  # item price, excluding shipping and tax
                     events.append(SaleEvent(listing.listing_id, "ebay", o.get("buyer", {}).get("username", "unknown"),
-                                            round(float(li["total"]["value"]) * 100), datetime.now(timezone.utc), o.get("orderId")))
+                                            round(float(cost["value"]) * 100), datetime.now(timezone.utc), o.get("orderId")))
         return events
 
     def respond_to_offer(self, listing: PlatformListing, offer: Offer, decision: Decision, message: str) -> None:

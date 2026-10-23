@@ -26,6 +26,10 @@ class BrowserTaskError(RuntimeError):
         return self.result.needs_user
 
 
+class OfferMismatch(RuntimeError):
+    """What the platform shows doesn't match what we decided: stop and surface it, never guess."""
+
+
 def _usd_to_cents(value) -> int:
     return round(float(str(value).replace("$", "").replace(",", "").strip()) * 100)
 
@@ -76,11 +80,25 @@ class BrowserAdapter:
             buyer = str(m.get("buyer") or "unknown")
             events.append(MessageEvent(listing.listing_id, self.name, str(m.get("thread_id") or buyer), buyer, str(m.get("text") or ""), now))
         if r.get("sold"):
-            events.append(SaleEvent(listing.listing_id, self.name, "unknown", listing.price_cents, now))
+            # The inbox page holds buyer-written text, so a "sold" read there is never trusted on its own.
+            v = self._run(tasks.verify_sold(self.name, listing.url)).result
+            if v.get("sold") and v.get("price_usd"):
+                events.append(SaleEvent(listing.listing_id, self.name, str(v.get("buyer") or "unknown"),
+                                        _usd_to_cents(v["price_usd"]), now, v.get("order_id")))
         return events
 
     def respond_to_offer(self, listing: PlatformListing, offer: Offer, decision: Decision, message: str) -> None:
-        self._run(tasks.respond_to_offer(self.name, listing.url, offer.buyer_id, decision.action, decision.amount_cents, message))
+        r = self._run(tasks.respond_to_offer(self.name, listing.url, offer.buyer_id, decision.action, decision.amount_cents,
+                                             message, offer_cents=offer.amount_cents)).result
+        shown = r.get("offer_shown_usd")
+        if shown is None or _usd_to_cents(shown) != offer.amount_cents:
+            raise OfferMismatch(f"platform shows {shown}, we decided on {offer.amount_cents / 100:.2f}")
+        final = r.get("final_amount_usd")
+        if decision.action in ("accept", "counter") and (final is None or _usd_to_cents(final) != decision.amount_cents):
+            raise OfferMismatch(f"platform recorded {final}, decision was {decision.amount_cents / 100:.2f}: check it now")
+
+    def cancel_order(self, listing: PlatformListing, order_id: str | None) -> None:
+        self._run(tasks.cancel_order(self.name, listing.url, order_id))
 
     def send_message(self, listing: PlatformListing, thread_id: str, text: str) -> None:
         task = tasks.BrowserTask(
