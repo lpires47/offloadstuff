@@ -1,0 +1,27 @@
+# Copy to evals/labels.yaml and put photos in evals/photos/ (both git-ignored by default).
+# Fastest way to label: `offload label-draft evals/photos --out evals/labels.yaml`, then correct each field.
+# Leave a field out if you don't know it; it won't be scored.
+
+- photo: photos/atom-hoody.jpg
+  extra_photos: [photos/atom-hoody-tag.jpg]   # optional: same item, more shots
+  items:
+    - brand: Arc'teryx
+      model_name: Atom LT Hoody
+      size: M
+      gender: mens            # mens | womens | unisex | boys | girls | baby | not_applicable
+      category: apparel       # see src/offload/vision/schema.py Category
+      condition: very_good    # new_with_tags | new_without_tags | like_new | very_good | good | fair | poor
+      colors: [black]
+
+- photo: photos/bed-pile.jpg   # a pile: one entry per sellable item
+  items:
+    - brand: Levi's
+      model_name: "501"
+      size: W30 L32
+      category: apparel
+      colors: [blue]
+      box: [430, 150, 860, 400]   # optional, 0-1000 grid: helps match items in piles
+    - brand: Madewell
+      model_name: Transport Tote
+      category: bags
+      colors: [brown]

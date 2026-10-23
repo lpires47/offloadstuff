@@ -1,0 +1,10 @@
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.venv/
+.env
+# user photos and labels stay local unless deliberately committed
+evals/photos/
+evals/runs/
+# browser sessions hold login cookies: never commit
+sessions/
