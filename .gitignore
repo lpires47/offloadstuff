@@ -8,3 +8,7 @@ evals/photos/
 evals/runs/
 # browser sessions hold login cookies: never commit
 sessions/
+data/runs/
+data/router_stats.json
+evals/benchmark/*/
+evals/benchmark/runs/

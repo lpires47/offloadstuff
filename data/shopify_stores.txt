@@ -1,0 +1,3 @@
+# Independent resale and vintage shops on Shopify, searched live through their own store search.
+# One per line as `segment: domain` (segments: fashion, menswear, luxury, sneakers, furniture, decor, general).
+# Add stores we've checked are Shopify-based, sell secondhand, and ship in the US.
