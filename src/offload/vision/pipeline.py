@@ -9,8 +9,8 @@ A single-item photo skips cropping and is identified from the full frame.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from concurrent.futures import ThreadPoolExecutor
+from collections.abc import Callable, Sequence
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 
 from PIL import ImageDraw
@@ -149,7 +149,10 @@ def detect_items(photo: Photo, llm: LLM, cfg: Settings | None = None) -> Detecti
     return llm.parse(
         model=cfg.detect_model,
         system=prompts.DETECT_SYSTEM,
-        content=[photo.content_block(), {"type": "text", "text": "List the items in this photo."}],
+        content=[
+            photo.content_block(),
+            {"type": "text", "text": f"The image is {photo.size[0]}x{photo.size[1]} pixels. List the items in it."},
+        ],
         output_model=Detection,
         max_tokens=4096,
     )
@@ -166,9 +169,10 @@ def _outlined(photo: Photo, box: Box) -> Photo:
 
 
 def box_of(item: DetectedItem, photo: Photo | None = None) -> Box:
-    """The item's box on the 0-1000 grid. If the model answered in pixels by mistake, rescale."""
+    """The model answers in pixels of the image it saw (Claude localizes worse on normalized grids);
+    we convert to our 0-1000 grid. Without the photo, coordinates are taken as already on the grid."""
     coords = (item.x0, item.y0, item.x1, item.y1)
-    if photo is not None and max(coords) > 1000:
+    if photo is not None:
         w, h = photo.size
         coords = (item.x0 * 1000 / w, item.y0 * 1000 / h, item.x1 * 1000 / w, item.y1 * 1000 / h)
     return Box.clamp(*coords)
@@ -195,6 +199,7 @@ def analyze_photo(
     context: str | None = None,
     cfg: Settings | None = None,
     max_workers: int = 6,
+    on_item: Callable[[ItemAnalysis], None] | None = None,
 ) -> PhotoAnalysis:
     """One photo of one item or a pile -> an analysis per item. No mode switch: the photo decides."""
     cfg = cfg or default_settings()
@@ -215,9 +220,15 @@ def analyze_photo(
         ident = identify_item([crop], llm, overview=_outlined(photo, box), cfg=cfg)
         return _finish(item, ident, [crop])
 
+    # Items stream out as each is identified (on_item), but the result keeps reading order.
+    results: dict[int, ItemAnalysis] = {}
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
-        items = list(pool.map(work, candidates))
-    return PhotoAnalysis(detection, items, skipped)
+        futures = {pool.submit(work, item): n for n, item in enumerate(candidates)}
+        for fut in as_completed(futures):
+            results[futures[fut]] = fut.result()
+            if on_item is not None:
+                on_item(results[futures[fut]])
+    return PhotoAnalysis(detection, [results[n] for n in range(len(candidates))], skipped)
 
 
 def add_photos(analysis: ItemAnalysis, new_photos: Sequence[Photo], llm: LLM, cfg: Settings | None = None) -> ItemAnalysis:

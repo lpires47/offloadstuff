@@ -65,10 +65,10 @@ Shot = Literal[
 class DetectedItem(BaseModel):
     id: str = Field(description="Short id, i1, i2, ... in reading order (left to right, top to bottom).")
     label: str = Field(description="Plain description, e.g. 'black hooded synthetic jacket'. No brand guesses here.")
-    x0: int = Field(description="Left edge on a 0-1000 grid across the image width.")
-    y0: int = Field(description="Top edge on a 0-1000 grid down the image height.")
-    x1: int = Field(description="Right edge on the 0-1000 grid.")
-    y1: int = Field(description="Bottom edge on the 0-1000 grid.")
+    x0: int = Field(description="Left edge, in pixels of the image as sent.")
+    y0: int = Field(description="Top edge, in pixels.")
+    x1: int = Field(description="Right edge, in pixels.")
+    y1: int = Field(description="Bottom edge, in pixels.")
     is_for_sale_candidate: bool = Field(
         description="False for things that are clearly the setting, not the goods: the bed, floor, table, "
         "hangers, people, pets, walls."

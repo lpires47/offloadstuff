@@ -15,6 +15,14 @@ from pydantic import BaseModel, Field
 from offload.vision.schema import Category
 
 Condition = Literal["new", "used", "unknown"]
+
+# eBay API License Agreement (updated 2025-09-03): eBay content may not be co-mingled with non-eBay
+# content in a public display (8.1(b)(2)), used to suggest or model prices (9.5), or used to train
+# algorithms (9.10) without eBay's written consent. So eBay results live in their own module, never
+# feed price badges, comps or typical prices, and are dropped from any training export.
+SEPARATE_DISPLAY_SOURCES = {"ebay"}
+NO_PRICING_SOURCES = {"ebay"}
+NO_TRAINING_SOURCES = {"ebay"}
 Rung = Literal["exact_new", "exact_used", "similar"]
 
 
@@ -126,9 +134,10 @@ class Ladder:
     exact_new: list[Result] = field(default_factory=list)
     exact_used: list[Result] = field(default_factory=list)
     similar: list[Result] = field(default_factory=list)
-    typical_used_cents: int | None = None  # median ask of exact used listings, for the badge
+    ebay: list[Result] = field(default_factory=list)  # shown as its own module; see SEPARATE_DISPLAY_SOURCES
+    typical_used_cents: int | None = None  # median ask of non-eBay exact used listings, for the badge
     sources_searched: list[str] = field(default_factory=list)
     sources_failed: dict[str, str] = field(default_factory=dict)
 
     def all(self) -> list[Result]:
-        return [*self.exact_new, *self.exact_used, *self.similar]
+        return [*self.exact_new, *self.exact_used, *self.similar, *self.ebay]

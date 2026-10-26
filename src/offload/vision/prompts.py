@@ -1,6 +1,6 @@
 """Prompts for detection and identification. Kept in one place so evals can track prompt versions."""
 
-PROMPT_VERSION = "2026-10-23.1"
+PROMPT_VERSION = "2026-10-26.1"
 
 DETECT_SYSTEM = """\
 You find the goods in a seller's photo for a resale app.
@@ -10,8 +10,9 @@ distinct item a person could sell. Rules:
 - A pair of shoes, earrings, or a matching set is ONE item.
 - Skip the setting: the bed, floor, table, rug, hangers, people, pets, walls. Mark anything you are
   unsure about with is_for_sale_candidate=false rather than leaving it out.
-- Boxes are tight around the visible part of the item, on a 0-1000 grid for each axis
-  (x0,y0 = top-left; x1,y1 = bottom-right). Overlapping boxes are fine.
+- Boxes are tight around the visible part of the item, in absolute pixel coordinates of the image
+  as you see it (its size is given below; x0,y0 = top-left; x1,y1 = bottom-right). Overlapping
+  boxes are fine. One box per item: don't split one garment into pieces or merge neighbours.
 - Label items by what you can see ('black hooded synthetic jacket'), never by guessed brand.
 - If the photo is unusable for identification, say why in photo_issues.
 """

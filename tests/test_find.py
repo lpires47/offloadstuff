@@ -145,12 +145,25 @@ def test_reissue_text_match_is_not_exact_without_vision():
 
 def test_style_code_match_and_price_badges():
     p = cesca(category="footwear", subcategory="sneaker", brand="Nike", model_name="Dunk Low", style_code="DD1391-100")
-    items = [lst(f"Nike Dunk Low Panda DD1391 100 size {s}", price, f"https://e/{s}", source="ebay")
+    items = [lst(f"Nike Dunk Low Panda DD1391 100 size {s}", price, f"https://e/{s}", source="grailed.com")
              for s, price in [(9, 9000), (10, 10000), (11, 11000), (12, 12000), (8, 6000)]]
     pre = L.preliminary(p, items)
     assert len(pre.exact_used) == 5 and pre.typical_used_cents == 10000
     badges = {r.listing.url: r.price_badge for r in pre.exact_used}
     assert badges["https://e/8"] == "good_price" and badges["https://e/12"] == "high" and badges["https://e/10"] == "typical"
+
+
+def test_ebay_results_are_separate_and_never_priced():
+    """eBay API License 8.1(b)(2) no co-mingling; 9.5 no price modeling."""
+    p = cesca()
+    items = [lst("Knoll Cesca Chair cane chrome", 40000 + i * 1000, f"https://a/{i}") for i in range(4)]
+    items += [lst("Knoll Cesca Chair cane chrome", 10000 + i, f"https://ebay.com/itm/{i}", source="ebay") for i in range(5)]
+    pre = L.preliminary(p, items)
+    assert all(r.listing.source != "ebay" for r in pre.exact_used + pre.exact_new + pre.similar)
+    assert len(pre.ebay) == 5 and all(r.price_badge is None for r in pre.ebay)
+    assert pre.typical_used_cents == 41500  # median of the four non-eBay asks only
+    est = price_from_ladder(pre, "very_good")
+    assert est is None or all(c.platform != "ebay" for c in est.comps_used)
 
 
 # ---------- sources over a mocked network ----------

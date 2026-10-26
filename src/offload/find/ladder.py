@@ -18,7 +18,16 @@ from offload.config import Settings, settings as default_settings
 from offload.images import Photo
 from offload.llm import LLM
 
-from .models import CandidateVerdict, ItemProfile, Ladder, Listing, Result, Verdicts
+from .models import (
+    NO_PRICING_SOURCES,
+    SEPARATE_DISPLAY_SOURCES,
+    CandidateVerdict,
+    ItemProfile,
+    Ladder,
+    Listing,
+    Result,
+    Verdicts,
+)
 
 _WORD = re.compile(r"[a-z0-9]+")
 STOP = {"the", "a", "an", "and", "with", "of", "in", "for", "by", "on", "style", "vintage", "new", "used"}
@@ -90,13 +99,22 @@ def _badge(price: int | None, typical: int | None):
 def assemble(profile: ItemProfile, results: list[Result]) -> Ladder:
     ladder = Ladder()
     for r in results:
-        getattr(ladder, r.rung).append(r)
-    priced = sorted(r.listing.price_cents for r in ladder.exact_used if r.listing.price_cents)
+        if r.listing.source in SEPARATE_DISPLAY_SOURCES:
+            ladder.ebay.append(r)
+        else:
+            getattr(ladder, r.rung).append(r)
+    priced = sorted(
+        r.listing.price_cents
+        for r in ladder.exact_used
+        if r.listing.price_cents and r.listing.source not in NO_PRICING_SOURCES
+    )
     if len(priced) >= 4:
         ladder.typical_used_cents = int(statistics.median(priced))
         for r in ladder.exact_used:
             r.price_badge = _badge(r.listing.price_cents, ladder.typical_used_cents)
     big = 10**12
+    rung_order = {"exact_new": 0, "exact_used": 1, "similar": 2}
+    ladder.ebay.sort(key=lambda r: (rung_order[r.rung], -r.score if r.rung == "similar" else r.listing.price_cents or big))
     ladder.exact_new.sort(key=lambda r: (r.listing.available is False, r.listing.price_cents or big))
     ladder.exact_used.sort(key=lambda r: (r.listing.available is False, r.confidence < 0.75, r.listing.price_cents or big))
     ladder.similar.sort(key=lambda r: -r.score)

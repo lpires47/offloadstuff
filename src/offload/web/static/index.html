@@ -26,7 +26,7 @@ label.cam input{display:none}.thumbs{display:flex;gap:6px;flex-wrap:wrap;margin:
 .card .t{font-size:13px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .price{font-weight:650}.src{font-size:12px;color:var(--muted)}.why{font-size:12px;color:var(--muted)}
 .badge{font-size:11px;font-weight:600;border-radius:6px;padding:1px 6px;width:fit-content}.badge.good_price{color:var(--good);background:color-mix(in srgb,var(--good) 14%,transparent)}.badge.high{color:var(--high);background:color-mix(in srgb,var(--high) 14%,transparent)}.badge.typical{color:var(--muted);background:var(--chip)}
-.empty{color:var(--muted);font-size:14px}.prelim{opacity:.7}
+.empty{color:var(--muted);font-size:14px}.ebay{margin-top:26px;padding:4px 12px 14px;border:1px solid var(--line);border-radius:16px;background:color-mix(in srgb,var(--chip) 50%,transparent)}.prelim{opacity:.7}
 .signoff{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:12px}
 .signoff .k{font-size:12px;color:var(--muted);margin-bottom:4px}.flag{color:var(--high);font-size:13px}
 [hidden]{display:none!important}
@@ -94,7 +94,8 @@ function ladderView(L, stage){
   return `<div class="${stage === "final" ? "" : "prelim"}">` +
     sec("The exact item, new", L.exact_new, stage === "final" ? "Not found new right now." : "Searching…") +
     sec("The exact item, used", L.exact_used, stage === "final" ? "No used listings of this exact item right now." : "Searching…", typical) +
-    sec("Similar", L.similar, stage === "final" ? "Nothing close enough yet." : "Searching…") + `</div>`;
+    sec("Similar", L.similar, stage === "final" ? "Nothing close enough yet." : "Searching…") +
+    ((L.ebay || []).length ? `<div class="ebay"><h2>On eBay · ${L.ebay.length}</h2><div class="grid">${L.ebay.map(r => card({...r, reason: {exact_new: "Exact item, new", exact_used: "Exact item, used", similar: "Similar"}[r.rung]})).join("")}</div></div>` : "") + `</div>`;
 }
 
 $("#ladder").addEventListener("click", e => {
