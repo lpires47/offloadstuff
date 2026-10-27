@@ -1,0 +1,24 @@
+# One-click deploy on Render: New -> Blueprint -> pick this repo. Paste the secrets when asked.
+services:
+  - type: web
+    name: offload-test
+    runtime: docker
+    plan: standard          # 2 GB: room for the agent's browsers
+    healthCheckPath: /api/health
+    disk:
+      name: data
+      mountPath: /data      # signed-in sessions and run logs survive restarts
+      sizeGB: 1
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: BRAVE_API_KEY
+        sync: false
+      - key: OFFLOAD_ACCESS_TOKEN
+        generateValue: true  # the private key in your link
+      - key: OFFLOAD_USER
+        value: liselle
+      - key: EBAY_CLIENT_ID
+        sync: false
+      - key: EBAY_CLIENT_SECRET
+        sync: false

@@ -46,7 +46,7 @@ async def private_link(request, call_next):
     (?k=... once, then a cookie) whenever OFFLOAD_ACCESS_TOKEN is set."""
     from fastapi.responses import PlainTextResponse, RedirectResponse
 
-    if not ACCESS_TOKEN:
+    if not ACCESS_TOKEN or request.url.path == "/api/health":
         return await call_next(request)
     if request.query_params.get("k") == ACCESS_TOKEN:
         resp = RedirectResponse(str(request.url.remove_query_params("k")))
