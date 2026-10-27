@@ -297,17 +297,18 @@ def test_engine_streams_profile_sources_and_final_ladder(tmp_path):
     assert "broken" in lad["sources_failed"] and lad["typical_used_cents"]
     json.dumps({k: v for k, v in final.items() if not k.startswith("_")})  # serializable
 
-    est = price_from_ladder(final["_ladder"], "very_good")
-    assert est is not None and est.method == "sold_comps" and est.floor_cents <= est.expected_cents <= est.list_cents
-    assert any("current listings" in n for n in est.notes)
+    est = price_from_ladder(final["_ladder"], "very_good", segment="furniture")
+    assert est is not None and est.floor_cents <= est.expected_cents <= est.list_cents
+    assert any("haven't sold" in n for n in est.notes)
 
 
 def test_price_from_ladder_falls_back_to_retail_or_none():
     p = cesca()
     new_only = L.preliminary(p, [lst("Knoll Cesca Chair", 120000, "https://knoll.com/c", source="knoll.com",
                                       condition="new", seller_type="retail")])
-    est = price_from_ladder(new_only, "good")
-    assert est is not None and est.method == "retail_fallback" and est.confidence == "low"
+    est = price_from_ladder(new_only, "good", segment="furniture")
+    assert est is not None and est.confidence == "low"
+    assert any("retail $1,200" in n for n in est.notes)
     assert price_from_ladder(L.preliminary(p, []), "good") is None
 
 

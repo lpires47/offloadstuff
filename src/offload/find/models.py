@@ -91,6 +91,12 @@ class Listing:
     mpn: str | None = None
     brand: str | None = None
     found_via: str = ""  # which query / connector produced it
+    status: Literal["active", "sold", "expired"] = "active"
+    days_listed: float | None = None  # how long it has been (or was) listed
+    sold_on: str | None = None  # ISO date of sale, for sold listings
+    sold_price_is_list: bool = False  # the site shows the last ask on sold items, not what was paid
+    likes: int | None = None
+    attributes: dict[str, str] = field(default_factory=dict)  # size, dimensions, material... as the site lists them
     fetched_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     @property

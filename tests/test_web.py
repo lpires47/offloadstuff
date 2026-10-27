@@ -70,4 +70,5 @@ def test_sell_returns_signoff_draft(monkeypatch, tmp_path):
     assert r.status_code == 200, body
     d = body["draft"]
     assert d and d["hidden_minimum_cents"] <= d["expected_cents"] <= d["price_cents"]
-    assert d["comps"] and "current listings" in " ".join(d["price_notes"])
+    assert d["comps"] and d["platforms"] and d["p_sold"]["30"] > 0 if "30" in d["p_sold"] else d["p_sold"][30] > 0
+    assert any("haven't sold" in n for n in d["price_notes"])  # active asks counted as unsold evidence

@@ -23,7 +23,8 @@ from offload.find.profile import build_profile
 from offload.find.router import RouterStats
 from offload.images import load_photo
 from offload.listing.compose import compose_listing
-from offload.listing.from_ladder import price_from_ladder
+from offload.find.router import segment as segment_of
+from offload.listing.from_ladder import as_estimate, value_from_ladder
 from offload.llm import AnthropicLLM, LLM
 from offload.vision.pipeline import _finish, identify_item
 
@@ -152,7 +153,14 @@ async def api_sell(photos: list[UploadFile] = File(...), speed: str = Form("bala
             final = event["_ladder"]
     ident = await ident_task
     analysis = _finish(None, ident, pics)
-    price = price_from_ladder(final, ident.condition, speed) if final else None
+    season = "outerwear" if any(w in ident.subcategory.lower() for w in ("coat", "jacket", "parka", "puffer")) else (
+        "swim" if "swim" in ident.subcategory.lower() else "default")
+    valuation = (
+        value_from_ladder(final, segment=segment_of(profile), condition=ident.condition, speed=speed,  # type: ignore[arg-type]
+                          season_family=season)
+        if final else None
+    )
+    price = as_estimate(valuation) if valuation else None
     body: dict = {
         "run": run_id,
         "ready_to_list": analysis.ready_to_list,
@@ -173,7 +181,17 @@ async def api_sell(photos: list[UploadFile] = File(...), speed: str = Form("bala
             "package": draft.package.__dict__ if hasattr(draft.package, "__dict__") else str(draft.package),
             "price_confidence": price.confidence,
             "price_notes": price.notes,
-            "comps": [{"title": c.title, "price_cents": c.price_cents, "url": c.url} for c in price.comps_used[:8]],
+            "tier": valuation.tier,
+            "value_cents": valuation.value_cents,
+            "p_sold": valuation.p_sold,
+            "median_days": valuation.median_days,
+            "evidence": valuation.evidence,
+            "platforms": [p.__dict__ for p in valuation.plans],
+            "comps": [
+                {"title": r.listing.title, "price_cents": r.listing.price_cents, "url": r.listing.url,
+                 "status": r.listing.status, "source": r.listing.source}
+                for r in final.exact_used[:8] if r.listing.source != "ebay"
+            ],
         }
     _log_event(run_id, {"type": "sell", **{k: v for k, v in body.items() if k != "market"}})
     return body

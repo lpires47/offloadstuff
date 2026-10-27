@@ -50,6 +50,17 @@ FEES: dict[str, FeeSchedule] = {
     ),
     "fbm_local": FeeSchedule("fbm_local", lambda p: 0, "unverified: third-party reports", False),
     "grailed": FeeSchedule("grailed", lambda p: round(p * 0.09) + round(p * 0.0349) + 49, "unverified", False),
+    # Furniture and design platforms [estimate, 2026-10-26]: commissions vary by seller plan and price.
+    "chairish": FeeSchedule(
+        "chairish",
+        lambda p: round(p * (0.30 if p <= 250000 else 0.20)),
+        "https://support.chairish.com/hc/en-us/articles/115006460407 (plans 20-40%; Standard assumed)",
+        False,
+    ),
+    "1stdibs": FeeSchedule("1stdibs", _pct(0.20), "unverified: seller commission varies by tier", False),
+    "kaiyo": FeeSchedule("kaiyo", _pct(0.40), "unverified: consignment payout varies", False),
+    "aptdeco": FeeSchedule("aptdeco", _pct(0.24), "unverified", False),
+    "etsy": FeeSchedule("etsy", lambda p: round(p * 0.065) + round(p * 0.03) + 45, "unverified: 6.5% + 3% + $0.25 + $0.20 listing", False),
 }
 
 
