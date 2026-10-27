@@ -11,6 +11,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from .attributes import ProductAttribute
+
 Category = Literal[
     "apparel",
     "footwear",
@@ -136,6 +138,10 @@ class Identification(BaseModel):
     gender_confidence: float
     colors: list[str] = Field(description="Main colors, most dominant first, plain names.")
     material: Attr
+    attributes: list[ProductAttribute] = Field(
+        description="The product-type template's attributes (see the list), with units and evidence, "
+        "plus any others that matter for this piece."
+    )
     condition: Condition
     condition_confidence: float
     flaws: list[Flaw]

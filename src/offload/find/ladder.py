@@ -160,6 +160,9 @@ def _verify_text(profile: ItemProfile, batch: Sequence[tuple[int, Listing]], has
     )
     lines.append(f"- identified as: {ident or 'unknown exact product'} ({profile.subcategory})")
     lines.append(f"- matching notes: {profile.notes}")
+    attrs = [f"{a.name}: {a.value}" for a in profile.attributes if a.value and a.confidence >= 0.6][:10]
+    if attrs:
+        lines.append("- attributes: " + "; ".join(attrs))
     lines.append("- defining details:")
     lines += [f"  - {d.detail}{' (must match)' if d.must_match else ''}" for d in profile.defining_details]
     if has_photo:

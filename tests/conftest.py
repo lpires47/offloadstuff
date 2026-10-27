@@ -27,6 +27,7 @@ def make_ident(**over) -> Identification:
         gender_confidence=0.92,
         colors=["black"],
         material=attr("nylon shell, synthetic insulation", 0.8, "care label"),
+        attributes=[],
         condition="very_good",
         condition_confidence=0.85,
         flaws=[Flaw(kind="pilling", location="both cuffs", severity="minor", note="light")],

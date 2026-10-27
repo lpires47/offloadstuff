@@ -1,6 +1,6 @@
 """Prompts for detection and identification. Kept in one place so evals can track prompt versions."""
 
-PROMPT_VERSION = "2026-10-26.1"
+PROMPT_VERSION = "2026-10-26.2"
 
 DETECT_SYSTEM = """\
 You find the goods in a seller's photo for a resale app.

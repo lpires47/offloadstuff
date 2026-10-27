@@ -12,6 +12,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from offload.vision.attributes import ProductAttribute
 from offload.vision.schema import Category
 
 Condition = Literal["new", "used", "unknown"]
@@ -54,6 +55,10 @@ class ItemProfile(BaseModel):
     era: str | None = Field(description="Approximate era for vintage or design pieces, e.g. '1970s'.")
     materials: list[str]
     colors: list[str]
+    attributes: list[ProductAttribute] = Field(
+        description="The product-type template's attributes you can determine (color, height, material, "
+        "pocket count, shape, rise, seat height...), plus any others that matter for this piece."
+    )
     defining_details: list[DefiningDetail] = Field(
         description="3-6 features that make this item what it is, most important first."
     )

@@ -19,6 +19,7 @@ from offload.find.sources.shopify import ShopifyStores
 from offload.find.sources.websearch import BraveSearch, WebSearchSource
 from offload.listing.from_ladder import price_from_ladder
 from offload.llm import ScriptedLLM
+from offload.vision.attributes import ProductAttribute
 
 
 def cesca(**kw) -> ItemProfile:
@@ -36,6 +37,10 @@ def cesca(**kw) -> ItemProfile:
         era="1970s",
         materials=["chrome", "cane", "beech"],
         colors=["black", "silver"],
+        attributes=[
+            ProductAttribute(name="seat height", value="18 in", confidence=0.6, evidence="typical spec", source="product_spec"),
+            ProductAttribute(name="arms", value="armless", confidence=0.95, evidence="visible", source="visible"),
+        ],
         defining_details=[
             DefiningDetail(detail="cantilevered chrome tube frame", why="the silhouette", must_match=True),
             DefiningDetail(detail="woven cane seat and back", why="signature material", must_match=True),
