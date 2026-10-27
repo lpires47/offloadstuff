@@ -25,7 +25,7 @@ from offload.llm import LLM
 from . import ladder as L
 from .models import ItemProfile, Ladder, Listing, Result
 from .deeplinks import handoff_links
-from .profile import build_profile
+from .profile import build_profile, quick_profile
 from .router import RouterStats, load_shopify_stores, route
 from .sources.base import SearchPlan, Source
 from .sources.ebay import EbayBrowse
@@ -169,9 +169,18 @@ async def find(
         if photo is not None and sources.ebay is not None:
             pending.add(asyncio.create_task(run("ebay:image", sources.ebay.search_by_image(photo, client))))
 
+        full_task = None
         if profile is None:
-            profile = await asyncio.to_thread(build_profile, llm, photos=photos, text=text, cfg=cfg)
-        yield {"type": "profile", "ms": ms(), "profile": profile.model_dump()}
+            # Two looks in parallel: a fast one to start searching now, the full one for matching.
+            full_task = asyncio.create_task(asyncio.to_thread(build_profile, llm, photos=photos, text=text, cfg=cfg))
+            try:
+                profile = await asyncio.to_thread(quick_profile, llm, photos=photos, text=text, cfg=cfg)
+                yield {"type": "profile", "stage": "quick", "ms": ms(), "profile": profile.model_dump()}
+            except Exception:  # noqa: BLE001 - fall back to waiting for the full read
+                profile = await full_task
+                full_task = None
+        if full_task is None:
+            yield {"type": "profile", "stage": "full", "ms": ms(), "profile": profile.model_dump()}
 
         stats = RouterStats.load(fs.router_stats_file) if fs.router_stats_file.exists() else None
         rt = route(profile, stats, load_shopify_stores(fs.shopify_stores_file), segment_override)
@@ -234,6 +243,9 @@ async def find(
             prelim.sources_searched, prelim.sources_failed = list(searched), dict(failed)
             yield {"type": "ladder", "stage": "preliminary", "ms": ms(), "ladder": ladder_dict(prelim)}
 
+        if full_task is not None:
+            profile = await full_task  # matching uses the full read: defining details, attributes, codes
+            yield {"type": "profile", "stage": "full", "ms": ms(), "profile": profile.model_dump()}
         shortlist = L.shortlist(profile, pool, fs.shortlist_size)
         urls = {x.key: x.image_urls[0] for x in shortlist if x.image_urls}
         got = await asyncio.gather(*(_thumb(u, client) for u in urls.values()))

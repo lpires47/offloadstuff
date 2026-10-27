@@ -80,11 +80,18 @@ class ScriptedLLM:
         self.calls.append(request)
         if not self._parse:
             raise AssertionError(f"ScriptedLLM: no scripted response left for {output_model.__name__}")
-        nxt = self._parse.pop(0)
-        result = nxt(request) if callable(nxt) and not isinstance(nxt, BaseModel) else nxt
-        if not isinstance(result, output_model):
-            raise AssertionError(f"ScriptedLLM: expected {output_model.__name__}, got {type(result).__name__}")
-        return result
+        # Calls can run concurrently (fast and full profile): take the first queued answer of the
+        # requested type. A scripted function is tried and kept in the queue if it answers another type.
+        for i, r in enumerate(self._parse):
+            if isinstance(r, BaseModel):
+                if isinstance(r, output_model):
+                    return self._parse.pop(i)
+                continue
+            result = r(request)
+            if isinstance(result, output_model):
+                self._parse.pop(i)
+                return result
+        raise AssertionError(f"ScriptedLLM: nothing scripted for {output_model.__name__}")
 
     def create(self, **kwargs):
         import copy

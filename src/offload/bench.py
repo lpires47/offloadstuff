@@ -170,7 +170,10 @@ def run_benchmark(path: Path, llm: LLM, sources: Sources | None = None, fs: Find
 
     judge = []
     for e in finds:
-        events = json.loads((out / f"{e['id']}.json").read_text())
+        path = out / f"{e['id']}.json"
+        if not path.exists():
+            continue
+        events = json.loads(path.read_text())
         final = next((x for x in events if x["type"] == "ladder" and x.get("stage") == "final"), None)
         if not final:
             continue

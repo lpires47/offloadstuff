@@ -36,6 +36,8 @@ class Settings:
     vision_model: str = field(default_factory=lambda: _env("OFFLOAD_VISION_MODEL", "claude-opus-5-5"))
     detect_model: str = field(default_factory=lambda: _env("OFFLOAD_DETECT_MODEL", "claude-sonnet-5-5"))
     text_model: str = field(default_factory=lambda: _env("OFFLOAD_TEXT_MODEL", "claude-sonnet-5-5"))
+    # Fast first look: just enough to start searching while the full read continues.
+    fast_model: str = field(default_factory=lambda: _env("OFFLOAD_FAST_MODEL", "claude-haiku-5-5"))
     computer_model: str = field(default_factory=lambda: _env("OFFLOAD_COMPUTER_MODEL", "claude-opus-5-5"))
     sessions_dir: Path = field(default_factory=lambda: Path(_env("OFFLOAD_SESSIONS_DIR", "./sessions")))
     # Long edge we send to the model. Models from Opus 4.7 on accept up to 2,576 px.
