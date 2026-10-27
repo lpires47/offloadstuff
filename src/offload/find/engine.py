@@ -31,6 +31,9 @@ from .sources.base import SearchPlan, Source
 from .sources.ebay import EbayBrowse
 from .sources.etsy import EtsySource
 from .sources.shopify import ShopifyStores
+from .sources.asuser.providers import Consents
+from .sources.asuser.reader import AsUserSource, NeedsUser, PacePolicy
+from .sources.asuser.recipes import for_segment
 from .sources.sites.registry import enabled_connectors
 from .sources.websearch import BraveSearch, WebSearchSource
 
@@ -48,8 +51,19 @@ class FindSettings:
         default_factory=lambda: Path(os.environ.get("OFFLOAD_ROUTER_STATS", "data/router_stats.json"))
     )
     source_timeout_s: float = 6.0
+    browser_timeout_s: float = 14.0  # a real page load in the user's session
     shortlist_size: int = 32
     verify_batch: int = 8
+
+
+@dataclass
+class AsUser:
+    """The shopper's own connected accounts: searched in their session, with their consent."""
+
+    user_id: str
+    provider: object  # LocalProvider | BrowserbaseProvider
+    consents: Consents
+    pace: PacePolicy = field(default_factory=PacePolicy)
 
 
 @dataclass
@@ -61,6 +75,7 @@ class Sources:
     web: BraveSearch | None = None
     shopify: ShopifyStores | None = None
     sites: bool = True  # direct site connectors named in OFFLOAD_ENABLED_SITES
+    as_user: "AsUser | None" = None  # search connected sites in the user's own session
     extra: list[Source] = field(default_factory=list)  # tests and future connectors
 
     @classmethod
@@ -140,9 +155,9 @@ async def find(
     searched: list[str] = []
     failed: dict[str, str] = {}
 
-    async def run(name: str, coro) -> tuple[str, list[Listing] | Exception]:
+    async def run(name: str, coro, timeout: float | None = None) -> tuple[str, list[Listing] | Exception]:
         try:
-            return name, await asyncio.wait_for(coro, fs.source_timeout_s)
+            return name, await asyncio.wait_for(coro, timeout or fs.source_timeout_s)
         except Exception as e:  # noqa: BLE001 - a source failing must not sink the search
             return name, e
 
@@ -179,6 +194,15 @@ async def find(
         for conn in direct:
             pending.add(asyncio.create_task(run(conn.name, conn.search(plan, client))))
         direct_domains = {c.domain for c in direct}
+        if sources.as_user is not None:
+            au = sources.as_user
+            allowed = au.consents.sites_for(au.user_id, "search")
+            for recipe in for_segment(rt.segment, allowed)[: au.pace.max_tabs]:
+                if recipe.domain in direct_domains:
+                    continue  # an official interface covers it
+                src = AsUserSource(recipe, au.user_id, au.provider, au.pace, city_slug)
+                pending.add(asyncio.create_task(run(src.name, src.search(plan, client), fs.browser_timeout_s)))
+                direct_domains.add(recipe.domain)
         if sources.web is not None:
             for group in rt.resale_groups:
                 group = [d for d in group if d not in direct_domains]  # covered directly
@@ -198,7 +222,8 @@ async def find(
                 name, got = task.result()
                 if isinstance(got, Exception):
                     failed[name] = f"{type(got).__name__}: {got}"[:200]
-                    yield {"type": "source", "ms": ms(), "source": name, "error": failed[name]}
+                    yield {"type": "source", "ms": ms(), "source": name, "error": failed[name],
+                           "needs_user": isinstance(got, NeedsUser)}
                     continue
                 searched.append(name)
                 pool.extend(got)

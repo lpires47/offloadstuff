@@ -38,6 +38,7 @@ label.cam input{display:none}.thumbs{display:flex;gap:6px;flex-wrap:wrap;margin:
   <div class="tabs" role="tablist">
     <button id="tab-find" aria-pressed="true">Find</button>
     <button id="tab-sell" aria-pressed="false">Sell</button>
+    <button id="tab-accounts" aria-pressed="false">Accounts</button>
   </div>
 
   <section id="find">
@@ -47,6 +48,11 @@ label.cam input{display:none}.thumbs{display:flex;gap:6px;flex-wrap:wrap;margin:
     <div class="status" id="find-status"></div>
     <div id="find-profile"></div>
     <div id="ladder"></div>
+  </section>
+
+  <section id="accounts" hidden>
+    <p class="src">Connect the sites you use. We search them as you, in your own session, only where you allow it. You can turn any of them off at any time.</p>
+    <div id="account-list"></div>
   </section>
 
   <section id="sell" hidden>
@@ -64,10 +70,27 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt
 let run = null, segment = null;
 
 function tab(name){
-  for (const t of ["find","sell"]) { $("#"+t).hidden = t !== name; $("#tab-"+t).setAttribute("aria-pressed", t === name); }
-  $("#title").textContent = name === "find" ? "Find it" : "Sell it";
+  for (const t of ["find","sell","accounts"]) { $("#"+t).hidden = t !== name; $("#tab-"+t).setAttribute("aria-pressed", t === name); }
+  $("#title").textContent = {find: "Find it", sell: "Sell it", accounts: "Your accounts"}[name];
+  if (name === "accounts") loadAccounts();
 }
-$("#tab-find").onclick = () => tab("find"); $("#tab-sell").onclick = () => tab("sell");
+$("#tab-find").onclick = () => tab("find"); $("#tab-sell").onclick = () => tab("sell"); $("#tab-accounts").onclick = () => tab("accounts");
+
+async function loadAccounts(){
+  const d = await (await fetch("/api/accounts")).json();
+  $("#account-list").innerHTML = d.sites.map(r => `<div class="row" style="justify-content:space-between;border-bottom:1px solid var(--line);padding:10px 0">
+    <div><div>${esc(r.domain)}</div><div class="src">${r.connected ? "Searching as you" : (r.needs_login ? "Sign in to connect" : "Off")}${r.notes ? " · " + esc(r.notes) : ""}</div></div>
+    <button data-site="${esc(r.site)}" data-on="${r.connected}">${r.connected ? "Turn off" : "Connect"}</button></div>`).join("");
+}
+$("#account-list").addEventListener("click", async e => {
+  const b = e.target.closest("button[data-site]"); if (!b) return;
+  const site = b.dataset.site;
+  if (b.dataset.on === "true") { await fetch(`/api/accounts/${site}/consent`, {method: "DELETE"}); return loadAccounts(); }
+  const c = await (await fetch(`/api/accounts/${site}/connect`, {method: "POST"})).json();
+  if (c.live_view) window.open(c.live_view, "_blank");
+  if (confirm(`Allow searching ${site} as you?`)) await fetch(`/api/accounts/${site}/consent`, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({scopes: ["search"]})});
+  loadAccounts();
+});
 
 function thumbs(input, box){ input.onchange = () => { box.innerHTML = ""; for (const f of input.files) { const i = new Image(); i.src = URL.createObjectURL(f); box.append(i); } }; }
 thumbs($("#find-photo"), $("#find-thumbs")); thumbs($("#sell-photo"), $("#sell-thumbs"));
@@ -121,7 +144,7 @@ $("#find-go").onclick = async () => {
       run = ev.run || run; segment = ev.segment || segment;
       if (ev.type === "profile") { $("#find-profile").innerHTML = profileView(ev.profile); status.textContent = "Searching stores and resale sites…"; }
       if (ev.type === "handoff" && ev.links.length) { $("#find-profile").insertAdjacentHTML("beforeend", `<div class="chips" style="margin-top:10px">${ev.links.map(l => `<a class="chip" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)} ↗</a>`).join("")}</div>`); }
-      if (ev.type === "source") { sources.push(ev.error ? `${ev.source} ✕` : `${ev.source.split(":")[0]} ${ev.count}`); status.textContent = `Searched: ${sources.join(" · ")}`; }
+      if (ev.type === "source") { sources.push(ev.needs_user ? `${ev.source.split(":").pop()}: connect in Accounts` : ev.error ? `${ev.source} ✕` : `${ev.source.split(":").pop()} ${ev.count}`); status.textContent = `Searched: ${sources.join(" · ")}`; }
       if (ev.type === "ladder") { $("#ladder").innerHTML = ladderView(ev.ladder, ev.stage); if (ev.stage === "final") status.textContent = `Done in ${(ev.ms/1000).toFixed(1)}s · ${ev.ladder.sources_searched.length} sources`; else status.textContent = "Checking which ones are the exact item…"; }
       if (ev.type === "error") status.textContent = "Error: " + ev.message;
     }

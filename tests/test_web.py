@@ -34,6 +34,7 @@ def setup(monkeypatch, tmp_path, llm):
     web._state.clear()
     web._state["llm"] = llm
     web._state["sources"] = Sources(sites=False, extra=[FakeSource("fake", items)])
+    web._state["consents"] = web.Consents(root=tmp_path / "consents")
     return TestClient(web.app)
 
 
@@ -72,3 +73,14 @@ def test_sell_returns_signoff_draft(monkeypatch, tmp_path):
     assert d and d["hidden_minimum_cents"] <= d["expected_cents"] <= d["price_cents"]
     assert d["comps"] and d["platforms"] and d["p_sold"]["30"] > 0 if "30" in d["p_sold"] else d["p_sold"][30] > 0
     assert any("haven't sold" in n for n in d["price_notes"])  # active asks counted as unsold evidence
+
+
+def test_accounts_consent_flow(monkeypatch, tmp_path):
+    client = setup(monkeypatch, tmp_path, ScriptedLLM([]))
+    rows = {r["site"]: r for r in client.get("/api/accounts").json()["sites"]}
+    assert "facebook" in rows and not rows["facebook"]["connected"]
+    assert client.post("/api/accounts/facebook/consent", json={"scopes": ["search"]}).json() == {"ok": True}
+    rows = {r["site"]: r for r in client.get("/api/accounts").json()["sites"]}
+    assert rows["facebook"]["connected"] and rows["facebook"]["scopes"] == ["search"]
+    client.delete("/api/accounts/facebook/consent")
+    assert not {r["site"]: r for r in client.get("/api/accounts").json()["sites"]}["facebook"]["connected"]

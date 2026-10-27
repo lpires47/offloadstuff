@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import logging
 import time
 import uuid
@@ -18,7 +19,9 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 from offload.config import settings
-from offload.find.engine import FindSettings, Sources, find, ladder_dict
+from offload.find.engine import AsUser, FindSettings, Sources, find, ladder_dict
+from offload.find.sources.asuser.providers import BrowserbaseProvider, Consents, LocalProvider
+from offload.find.sources.asuser.recipes import NEVER, RECIPES
 from offload.find.profile import build_profile
 from offload.find.router import RouterStats
 from offload.images import load_photo
@@ -43,9 +46,29 @@ def llm() -> LLM:
     return _state["llm"]
 
 
+USER_ID = os.environ.get("OFFLOAD_USER", "liselle")  # single-user test; real auth comes with accounts
+
+
+def consents() -> Consents:
+    if "consents" not in _state:
+        _state["consents"] = Consents()
+    return _state["consents"]
+
+
+def provider():
+    """The user's browser sessions: hosted (Browserbase) in production, local Chromium in development."""
+    if "provider" not in _state:
+        kind = os.environ.get("OFFLOAD_BROWSER", "local")
+        _state["provider"] = BrowserbaseProvider() if kind == "browserbase" else LocalProvider()
+    return _state["provider"]
+
+
 def sources() -> Sources:
     if "sources" not in _state:
-        _state["sources"] = Sources.from_settings(FindSettings())
+        s = Sources.from_settings(FindSettings())
+        if os.environ.get("OFFLOAD_BROWSER", "local") != "off":
+            s.as_user = AsUser(USER_ID, provider(), consents())
+        _state["sources"] = s
     return _state["sources"]
 
 
@@ -200,3 +223,46 @@ async def api_sell(photos: list[UploadFile] = File(...), speed: str = Form("bala
         }
     _log_event(run_id, {"type": "sell", **{k: v for k, v in body.items() if k != "market"}})
     return body
+
+
+# ---------- connected accounts: the user's own sites, with consent ----------
+
+
+class Consent(BaseModel):
+    scopes: list[str] = ["search"]
+
+
+@app.get("/api/accounts")
+async def accounts():
+    granted = consents().get(USER_ID)
+    rows = []
+    for r in RECIPES.values():
+        rows.append({"site": r.name, "domain": r.domain, "connected": r.name in granted,
+                     "scopes": granted.get(r.name, {}).get("scopes", []), "needs_login": r.login, "notes": r.notes})
+    return {"user": USER_ID, "sites": rows, "never": NEVER}
+
+
+@app.post("/api/accounts/{site}/consent")
+async def grant(site: str, c: Consent):
+    if site not in RECIPES:
+        raise HTTPException(404, f"unknown site {site}")
+    consents().grant(USER_ID, site, c.scopes)
+    _log_event("consent", {"type": "consent", "site": site, "scopes": c.scopes})
+    return {"ok": True}
+
+
+@app.delete("/api/accounts/{site}/consent")
+async def revoke(site: str):
+    consents().revoke(USER_ID, site)
+    _log_event("consent", {"type": "revoke", "site": site})
+    return {"ok": True}
+
+
+@app.post("/api/accounts/{site}/connect")
+async def connect(site: str):
+    """Sign in to a site as yourself. Hosted: a live view of your browser. Local: run `offload connect`."""
+    p = provider()
+    if isinstance(p, BrowserbaseProvider):
+        s = await p.session(USER_ID)
+        return {"live_view": await p.live_view_url(s["id"]), "open": f"https://www.{RECIPES[site].domain}/"}
+    return {"instructions": f"On the machine running the app: offload connect {site} --user {USER_ID}"}

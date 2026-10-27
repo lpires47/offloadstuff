@@ -185,6 +185,32 @@ def cmd_sites(args) -> None:
     asyncio.run(check())
 
 
+def cmd_connect(args) -> None:
+    """Sign in to a site yourself in a visible browser; we keep the session (never the password)
+    and record your consent to search it as you."""
+    import asyncio
+
+    from .find.sources.asuser.providers import Consents, LocalProvider
+    from .find.sources.asuser.recipes import RECIPES
+
+    recipe = RECIPES[args.site]
+
+    async def go():
+        provider = LocalProvider(headless=False)
+        try:
+            ctx = await provider.context(args.user, recipe.name)
+            page = await ctx.new_page()
+            await page.goto(f"https://www.{recipe.domain}/")
+            await asyncio.to_thread(input, f"Sign in to {recipe.domain} in the window, then press Enter here... ")
+            await provider.save(args.user, recipe.name, ctx)
+        finally:
+            await provider.close()
+
+    asyncio.run(go())
+    Consents().grant(args.user, recipe.name, args.scopes)
+    print(f"Connected {recipe.name} for {args.user} with consent to: {', '.join(args.scopes)}")
+
+
 def cmd_serve(args) -> None:
     import uvicorn
 
@@ -238,6 +264,12 @@ def main(argv: list[str] | None = None) -> None:
     s.add_argument("--check", action="store_true")
     s.add_argument("--query", default="levis 501")
     s.set_defaults(fn=cmd_sites)
+
+    s = sub.add_parser("connect", help="sign in to a site as yourself and allow searching it as you")
+    s.add_argument("site")
+    s.add_argument("--user", default="liselle")
+    s.add_argument("--scopes", nargs="+", default=["search"])
+    s.set_defaults(fn=cmd_connect)
 
     s = sub.add_parser("serve", help="run the test app")
     s.add_argument("--host", default="0.0.0.0")
