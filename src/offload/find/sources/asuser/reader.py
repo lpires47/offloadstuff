@@ -136,7 +136,7 @@ CARDS_JS = r"""
       card = card.parentElement;
     }
     const img = (card || a).querySelector('img');
-    const title = (a.getAttribute('aria-label') || (img && img.alt) || a.innerText || '').trim().split('\n')[0];
+    const title = (a.getAttribute('aria-label') || (img && img.alt) || a.innerText || '').trim().split('\n')[0];  // full label: parsed in Python
     seen.add(u.pathname);
     out.push({url: u.href.split('?')[0], title, price, img: img ? (img.currentSrc || img.src) : null,
               sold: /\bsold\b/i.test((card || a).innerText || '')});
@@ -232,16 +232,35 @@ async def read_page(context, recipe: Recipe, url: str, *, timeout_s: float = 8.0
                     listings.append(got)
         if not listings:
             for c in await page.evaluate(CARDS_JS, recipe.item_path):
-                listings.append(Listing(
-                    source=recipe.name, url=c["url"], title=c["title"], price_cents=_price(c["price"]),
-                    image_urls=[c["img"]] if c.get("img") else [], seller_type="resale",
-                    status="sold" if c.get("sold") else "active", found_via=f"asuser:{recipe.name}:cards",
-                ))
+                listings.append(card_listing(recipe, c))
         if not listings and state["login"] and recipe.login:
             raise NeedsUser(f"connect your {recipe.name} account to search it")
         return listings
     finally:
         await page.close()
+
+
+# Card labels like Facebook's: "Title, $150, reduced from $195, San Francisco, CA, listing 1606..."
+_LABEL = re.compile(
+    r"^(?P<title>.+?), (?P<price>\$[\d,]+(?:\.\d{2})?)(?:, reduced from (?P<was>\$[\d,]+(?:\.\d{2})?))?"
+    r"(?:, (?P<loc>[^,]*(?:, [A-Z]{2})?))?, listing \d+$"
+)
+
+
+def card_listing(recipe: Recipe, c: dict) -> Listing:
+    title, price, loc, attrs = c["title"], _price(c["price"]), None, {}
+    m = _LABEL.match(title or "")
+    if m:
+        title, price = m["title"], _price(m["price"])
+        loc = (m["loc"] or "").strip(", ") or None
+        if m["was"]:
+            attrs["was_price"] = m["was"]
+    return Listing(
+        source=recipe.name, url=c["url"], title=title, price_cents=price,
+        image_urls=[c["img"]] if c.get("img") else [], seller_type="resale", location=loc,
+        status="sold" if c.get("sold") else "active", attributes=attrs,
+        found_via=f"asuser:{recipe.name}:cards",
+    )
 
 
 class AsUserSource:

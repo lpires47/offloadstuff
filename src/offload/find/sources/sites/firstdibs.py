@@ -36,7 +36,7 @@ class FirstDibs(SiteConnector):
     check_robots = False
 
     def __init__(self) -> None:
-        self.client = MCPClient(ENDPOINT)
+        self.client = MCPClient(ENDPOINT, transport="curl")  # their firewall stalls Python TLS clients
 
     async def _search(self, q: Query, client: httpx.AsyncClient) -> list[Listing]:
         if q.sold:
@@ -54,15 +54,21 @@ class FirstDibs(SiteConnector):
 
     @staticmethod
     def parse(x: dict) -> Listing:
-        url = first(x, "url", "link", "itemUrl", default="")
+        url = first(x, "productDetailUrl", "url", "link", "itemUrl", default="")
+        url = url.split("?")[0] if "utm_" in url else url
         if url and url.startswith("/"):
             url = "https://www.1stdibs.com" + url
         price = first(x, "price.amount", "price.value", "price", "convertedAmounts.USD")
         images = first(x, "images", "imageUrls", "photos", default=[])
         if isinstance(images, str):
             images = [images]
+        primary = first(x, "primaryImage")
+        extra = first(x, "additionalImages", default=[])
+        if isinstance(extra, str):
+            extra = [e.strip(" '\"") for e in extra.strip("[]").split(",") if e.strip()]
+        images = ([primary] if primary else []) + list(extra) + list(images)
         images = [i.get("url") if isinstance(i, dict) else i for i in images][:4]
-        sold = bool(first(x, "isSold", default=False))
+        sold = bool(first(x, "isSold", default=False)) or first(x, "available", default=True) is False
         attrs = {k: str(v) for k, v in {
             "designer": first(x, "creator.name", "creator", "designer"),
             "period": first(x, "period", "productionDate"),

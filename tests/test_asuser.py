@@ -102,3 +102,19 @@ def test_walker_finds_listings_in_unknown_shapes():
                                           "sold": True}]}]}, RECIPES["grailed"], out)
     (x,) = out
     assert x.url == "https://www.grailed.com/listings/9" and x.price_cents == 18000 and x.status == "sold"
+
+
+def test_facebook_card_labels_as_seen_live():
+    """Labels copied from a real Marketplace search, 2026-10-27."""
+    from offload.find.sources.asuser.reader import card_listing
+
+    fb = RECIPES["facebook"]
+    a = card_listing(fb, {"url": "https://www.facebook.com/marketplace/item/1606259317092238/", "price": "$150",
+                          "title": "Two Cesca Style Chairs, $150, reduced from $195, San Francisco, CA, listing 1606259317092238"})
+    assert (a.title, a.price_cents, a.location, a.attributes["was_price"]) == ("Two Cesca Style Chairs", 15000, "San Francisco, CA", "$195")
+    b = card_listing(fb, {"url": "u", "price": "$480",
+                          "title": "Cesca side chair by Marcel Breuer for Knoll (Price Per chair), $480, , listing 1591391152424595"})
+    assert b.title == "Cesca side chair by Marcel Breuer for Knoll (Price Per chair)" and b.price_cents == 48000 and b.location is None
+    c = card_listing(fb, {"url": "u", "price": "$320.61",
+                          "title": "Zesthouse Natural Rattan Dining Chairs Set Of 2, Modern Cesca Kitchen Chair, $320.61, Citrus Heights, CA, listing 29044495775136847"})
+    assert c.title.startswith("Zesthouse") and c.price_cents == 32061 and c.location == "Citrus Heights, CA"

@@ -20,9 +20,48 @@ class MCPError(Exception):
     pass
 
 
+class _Resp:
+    def __init__(self, status: int, headers: dict, text: str) -> None:
+        self.status_code, self.headers, self.text = status, headers, text
+
+    def json(self):
+        return json.loads(self.text)
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise MCPError(f"HTTP {self.status_code}")
+
+
+async def _curl_post(url: str, body: dict, headers: dict, timeout: float) -> _Resp:
+    """POST with the system curl. Some sites' firewalls stall Python HTTP clients' TLS handshakes;
+    curl is a standard client, sending our real User-Agent, so this is not disguising anything."""
+    import asyncio
+
+    args = ["curl", "-sS", "-m", str(int(timeout)), "-D", "-", "-X", "POST", url, "--data-binary", "@-"]
+    for k, v in headers.items():
+        args += ["-H", f"{k}: {v}"]
+    proc = await asyncio.create_subprocess_exec(*args, stdin=asyncio.subprocess.PIPE,
+                                                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    out, err = await proc.communicate(json.dumps(body).encode())
+    if proc.returncode != 0:
+        raise MCPError(f"curl failed: {err.decode()[:200]}")
+    raw = out.decode("utf-8", "replace")
+    # skip proxy "200 Connection Established" blocks: the last header block belongs to the response
+    blocks = raw.split("\r\n\r\n")
+    i = 0
+    while i < len(blocks) - 1 and blocks[i + 1].startswith("HTTP/"):
+        i += 1
+    head, text = blocks[i], "\r\n\r\n".join(blocks[i + 1:])
+    lines = head.split("\r\n")
+    status = int(lines[0].split()[1])
+    hdrs = {l.split(":", 1)[0].strip().lower(): l.split(":", 1)[1].strip() for l in lines[1:] if ":" in l}
+    return _Resp(status, hdrs, text)
+
+
 class MCPClient:
-    def __init__(self, url: str) -> None:
+    def __init__(self, url: str, transport: str = "httpx") -> None:
         self.url = url
+        self.transport = transport
         self.session_id: str | None = None
         self._ids = itertools.count(1)
 
@@ -48,7 +87,10 @@ class MCPClient:
         msg: dict = {"jsonrpc": "2.0", "method": method, "params": params or {}}
         if not notify:
             msg["id"] = next(self._ids)
-        r = await client.post(self.url, json=msg, headers=self._headers(), timeout=8)
+        if self.transport == "curl":
+            r = await _curl_post(self.url, msg, self._headers(), 15)
+        else:
+            r = await client.post(self.url, json=msg, headers=self._headers(), timeout=8)
         if r.status_code in (401, 403):
             raise MCPError(f"{self.url} requires sign-in ({r.status_code})")
         r.raise_for_status()

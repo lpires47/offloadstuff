@@ -119,7 +119,9 @@ def test_1stdibs_mcp_session_and_parse():
                                                       "result": {"content": [{"type": "text", "text": json.dumps(payload)}]}})
         return httpx.Response(200, text=body, headers={"content-type": "text/event-stream"})
 
-    out = run(FirstDibs(), handler, SearchPlan(cesca(), ["breuer cesca chair"], []))
+    conn = FirstDibs()
+    conn.client.transport = "httpx"  # mocked network in tests
+    out = run(conn, handler, SearchPlan(cesca(), ["breuer cesca chair"], []))
     assert calls[:2] == ["initialize", "notifications/initialized"]
     x = out[0]
     assert x.url.startswith("https://www.1stdibs.com/furniture/") and x.price_cents == 240000
