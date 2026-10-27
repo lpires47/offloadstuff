@@ -116,17 +116,27 @@ def _p(xs: list[int | None], q: float) -> str:
     return f"{vals[min(len(vals) - 1, int(q * len(vals)))] / 1000:.1f}s" if vals else "n/a"
 
 
-def run_benchmark(path: Path, llm: LLM, sources: Sources | None = None, fs: FindSettings | None = None) -> Path:
+def run_benchmark(path: Path, llm: LLM, sources: Sources | None = None, fs: FindSettings | None = None,
+                  concurrency: int = 1) -> Path:
     entries = yaml.safe_load(path.read_text())
     base = path.parent
     out = base / "runs" / time.strftime("%Y%m%d-%H%M%S")
     out.mkdir(parents=True)
     sources = sources or Sources.from_settings(FindSettings())
     fs = fs or FindSettings()
-    finds = [e for e in entries if e.get("kind", "find") != "pile"]
+    finds = [e for e in entries if e.get("kind", "find") == "find"]
+    sem = asyncio.Semaphore(concurrency)
+
+    async def guarded(e):
+        async with sem:
+            try:
+                return await _run_item(e, base, llm, sources, fs, out)
+            except Exception as err:  # noqa: BLE001 - one bad item shouldn't sink the run
+                (out / f"{e['id']}.error.txt").write_text(f"{type(err).__name__}: {err}")
+                return ItemScore(e["id"], None, None, 0, 0, 0, None, None, None, {"run": str(err)[:200]})
 
     async def go():
-        return [await _run_item(e, base, llm, sources, fs, out) for e in finds]
+        return list(await asyncio.gather(*(guarded(e) for e in finds)))
 
     scores = asyncio.run(go())
     lines = [

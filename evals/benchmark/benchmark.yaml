@@ -1,0 +1,478 @@
+- id: adidas-shoe-size-label-us-9-5
+  kind: skip
+  photos: []
+  note: size-tag photo of one of the Adidas shoes; not its own item
+- id: beaded-fringe-necklace
+  kind: find
+  category: jewelry
+  photos:
+  - beaded-fringe-necklace/img-1591.jpg
+  truth:
+    name: beaded fringe necklace
+    brand: null
+    model: null
+    size: null
+    paid_usd: 30
+    exact_urls: []
+  note: "\uFEFFPink and orange beaded necklace with fake gold chain, $30"
+- id: beige-adidas-terrex-shoes-with-orange-toe
+  kind: find
+  category: footwear
+  photos:
+  - beige-adidas-terrex-shoes-with-orange-toe/img-1556.jpg
+  - beige-adidas-terrex-shoes-with-orange-toe/img-1557.jpg
+  truth:
+    name: beige adidas terrex shoes with orange toe
+    brand: Adidas
+    model: Terrex Free Hiker 2 GORE-TEX
+    size: W 9.5
+    paid_usd: 150
+    exact_urls: []
+  note: "\uFEFFAdidas Terrex Free Hiker 2 GORE-TEX Hiking Shoes\nWomens\n9.5\n$150"
+- id: black-crocs-clogs
+  kind: find
+  category: footwear
+  photos: []
+  truth:
+    name: black crocs clogs
+    brand: Crocs
+    model: Classic Clog
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFFBlack crocs\nPretty old unsure of original price"
+- id: black-salomon-running-vest-hydration-pack
+  kind: find
+  category: sports_outdoors
+  photos:
+  - black-salomon-running-vest-hydration-pack/img-1675.jpg
+  - black-salomon-running-vest-hydration-pack/img-1676.jpg
+  truth:
+    name: black salomon running vest hydration pack
+    brand: Salomon
+    model: ADV Skin 5
+    size: null
+    paid_usd: 120
+    exact_urls: []
+  note: "\uFEFFBlack salomon advanced skin 5L running vest probably $120 or so but\
+    \ don’t remember"
+- id: checked-coat-f-by-sea
+  kind: find
+  category: apparel
+  photos:
+  - checked-coat-f-by-sea/img-1666.jpg
+  truth:
+    name: checked coat f by sea
+    brand: F by the Sea
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFFPlaid women’s coat f by the sea unclear pricing bought used"
+- id: clear-glass-decanter-with-wide-conical-base
+  kind: find
+  category: kitchen
+  photos:
+  - clear-glass-decanter-with-wide-conical-base/img-1654.jpg
+  - clear-glass-decanter-with-wide-conical-base/img-1655.jpg
+  truth:
+    name: clear glass decanter with wide conical base
+    brand: null
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: colourful-talavera-style-ceramic-cup-vase
+  kind: find
+  category: home_decor
+  photos:
+  - colourful-talavera-style-ceramic-cup-vase/img-1589.jpg
+  truth:
+    name: colourful talavera style ceramic cup vase
+    brand: null
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: dark-brown-black-adidas-terrex-gtx-shoes
+  kind: find
+  category: footwear
+  photos:
+  - dark-brown-black-adidas-terrex-gtx-shoes/img-1558.jpg
+  - dark-brown-black-adidas-terrex-gtx-shoes/img-1559.jpg
+  truth:
+    name: dark brown black adidas terrex gtx shoes
+    brand: Adidas
+    model: Terrex AX4 GORE-TEX
+    size: M 9.5
+    paid_usd: 150
+    exact_urls: []
+  note: "\uFEFFAdidas Terrex AX4 GORE-TEX Hiking Shoes\nMens\n9.5\nProbably $150"
+- id: denim-jacket-label-909-pioneer
+  kind: find
+  category: apparel
+  photos:
+  - denim-jacket-label-909-pioneer/img-1668.jpg
+  - denim-jacket-label-909-pioneer/img-1669.jpg
+  truth:
+    name: denim jacket label 909 pioneer
+    brand: 909 Pioneer
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: farm-rio-floral-blouse-with-blue-sailor-collar
+  kind: find
+  category: apparel
+  photos:
+  - farm-rio-floral-blouse-with-blue-sailor-collar/img-1688.jpg
+  truth:
+    name: farm rio floral blouse with blue sailor collar
+    brand: Farm Rio
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: good-american-one-size-black-textured-swimsuit-bodysuit
+  kind: find
+  category: apparel
+  photos:
+  - good-american-one-size-black-textured-swimsuit-bodysuit/img-1677.jpg
+  - good-american-one-size-black-textured-swimsuit-bodysuit/img-1678.jpg
+  truth:
+    name: good american one size black textured swimsuit bodysuit
+    brand: Good American
+    model: null
+    size: null
+    paid_usd: 60
+    exact_urls: []
+  note: "\uFEFFGood american black one size swimsuit probably $60"
+- id: green-glass-footed-bowl
+  kind: find
+  category: home_decor
+  photos:
+  - green-glass-footed-bowl/img-1651.jpg
+  truth:
+    name: green glass footed bowl
+    brand: null
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: ikea-white-globe-lamp-on-fireplace-hearth
+  kind: find
+  category: home_decor
+  photos:
+  - ikea-white-globe-lamp-on-fireplace-hearth/img-1658.jpg
+  - ikea-white-globe-lamp-on-fireplace-hearth/img-1659.jpg
+  truth:
+    name: ikea white globe lamp on fireplace hearth
+    brand: IKEA
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: john-fluevog-teal-chelsea-boots
+  kind: find
+  category: footwear
+  photos:
+  - john-fluevog-teal-chelsea-boots/img-1663.jpg
+  - john-fluevog-teal-chelsea-boots/img-1664.jpg
+  - john-fluevog-teal-chelsea-boots/img-1665.jpg
+  truth:
+    name: john fluevog teal chelsea boots
+    brand: John Fluevog
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: joon-loloi-dark-wood-full-length-mirror-with-wavy-inner-edge
+  kind: find
+  category: home_decor
+  photos:
+  - joon-loloi-dark-wood-full-length-mirror-with-wavy-inner-edge/img-1646.jpg
+  - joon-loloi-dark-wood-full-length-mirror-with-wavy-inner-edge/img-1647.jpg
+  - joon-loloi-dark-wood-full-length-mirror-with-wavy-inner-edge/img-1648.jpg
+  truth:
+    name: joon loloi dark wood full length mirror with wavy inner edge
+    brand: Loloi
+    model: Joon
+    size: null
+    paid_usd: 599
+    exact_urls: []
+  note: "\uFEFFJoon loloi full length wood mirror probably $599"
+- id: la-maison-american-vintage-fuzzy-orange-vest
+  kind: find
+  category: apparel
+  photos:
+  - la-maison-american-vintage-fuzzy-orange-vest/img-1673.jpg
+  truth:
+    name: la maison american vintage fuzzy orange vest
+    brand: American Vintage
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: lime-green-and-coral-adidas-terrex-gtx-300-trail-shoes
+  kind: find
+  category: footwear
+  photos:
+  - lime-green-and-coral-adidas-terrex-gtx-300-trail-shoes/img-1551.jpg
+  - lime-green-and-coral-adidas-terrex-gtx-300-trail-shoes/img-1555.jpg
+  truth:
+    name: lime green and coral adidas terrex gtx 300 trail shoes
+    brand: Adidas
+    model: Terrex
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: lulu-and-georgia-houghton-brass-chandelier
+  kind: find
+  category: home_decor
+  photos:
+  - lulu-and-georgia-houghton-brass-chandelier/img-1649.jpg
+  truth:
+    name: lulu and georgia houghton brass chandelier
+    brand: Lulu and Georgia
+    model: Houghton chandelier
+    size: null
+    paid_usd: 800
+    exact_urls: []
+  note: "\uFEFFLulu and georgia houghton chandelier $800"
+- id: on-running-shorts-yellow-black
+  kind: find
+  category: apparel
+  photos:
+  - on-running-shorts-yellow-black/img-1679.jpg
+  - on-running-shorts-yellow-black/img-1680.jpg
+  truth:
+    name: on running shorts yellow black
+    brand: 'On'
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: patterned-short-sleeve-button-shirt-with-embroidered-collar
+  kind: find
+  category: apparel
+  photos:
+  - patterned-short-sleeve-button-shirt-with-embroidered-collar/img-1681.jpg
+  - patterned-short-sleeve-button-shirt-with-embroidered-collar/img-1682.jpg
+  truth:
+    name: patterned short sleeve button shirt with embroidered collar
+    brand: null
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: pink-red-striped-fleece-vest
+  kind: find
+  category: apparel
+  photos:
+  - pink-red-striped-fleece-vest/img-1674.jpg
+  truth:
+    name: pink red striped fleece vest
+    brand: null
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: pleated-shade-table-lamp-with-square-base
+  kind: find
+  category: home_decor
+  photos:
+  - pleated-shade-table-lamp-with-square-base/img-1588.jpg
+  - pleated-shade-table-lamp-with-square-base/img-1656.jpg
+  truth:
+    name: pleated shade table lamp with square base
+    brand: null
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: rachel-zoe-colourful-tropical-print-shirt
+  kind: find
+  category: apparel
+  photos:
+  - rachel-zoe-colourful-tropical-print-shirt/img-1683.jpg
+  truth:
+    name: rachel zoe colourful tropical print shirt
+    brand: Rachel Zoe
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: red-and-pink-striped-vase-with-coloured-pussy-willow-branche
+  kind: find
+  category: home_decor
+  photos:
+  - red-and-pink-striped-vase-with-coloured-pussy-willow-branche/img-1644.jpg
+  - red-and-pink-striped-vase-with-coloured-pussy-willow-branche/img-1645.jpg
+  truth:
+    name: red and pink striped vase with coloured pussy willow branche
+    brand: null
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: stacked-ceramic-bowls-beige-and-grey
+  kind: find
+  category: kitchen
+  photos:
+  - stacked-ceramic-bowls-beige-and-grey/img-1686.jpg
+  - stacked-ceramic-bowls-beige-and-grey/img-1687.jpg
+  truth:
+    name: stacked ceramic bowls beige and grey
+    brand: null
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: teak-purple-boucle-armchair-with-wooden-arms
+  kind: find
+  category: furniture
+  photos:
+  - teak-purple-boucle-armchair-with-wooden-arms/img-1642.jpg
+  - teak-purple-boucle-armchair-with-wooden-arms/img-1643.jpg
+  truth:
+    name: teak purple boucle armchair with wooden arms
+    brand: null
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: teal-enamel-earrings
+  kind: find
+  category: jewelry
+  photos: []
+  truth:
+    name: teal enamel earrings
+    brand: null
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: tulip-floral-drum-ceiling-light
+  kind: find
+  category: home_decor
+  photos:
+  - tulip-floral-drum-ceiling-light/img-1670.jpg
+  - tulip-floral-drum-ceiling-light/img-1671.jpg
+  truth:
+    name: tulip floral drum ceiling light
+    brand: Tulip
+    model: null
+    size: null
+    paid_usd: 150
+    exact_urls: []
+  note: "\uFEFFDrum ceiling shade tulip brand $150"
+- id: vince-camuto-black-white-gingham-sleeveless-ruffle-top
+  kind: find
+  category: apparel
+  photos:
+  - vince-camuto-black-white-gingham-sleeveless-ruffle-top/img-1672.jpg
+  truth:
+    name: vince camuto black white gingham sleeveless ruffle top
+    brand: Vince Camuto
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: west-elm-pierce-and-ward-oval-walnut-two-tier-coffee-table
+  kind: find
+  category: furniture
+  photos:
+  - west-elm-pierce-and-ward-oval-walnut-two-tier-coffee-table/img-1433.jpg
+  truth:
+    name: west elm pierce and ward oval walnut two tier coffee table
+    brand: West Elm
+    model: Pierce + Ward oval coffee table
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: white-and-pink-adidas-adizero-evo-sl-shoe
+  kind: find
+  category: footwear
+  photos:
+  - white-and-pink-adidas-adizero-evo-sl-shoe/img-1660.jpg
+  - white-and-pink-adidas-adizero-evo-sl-shoe/img-1661.jpg
+  truth:
+    name: white and pink adidas adizero evo sl shoe
+    brand: Adidas
+    model: Adizero Evo SL
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: white-classical-statue-on-black-marble-base
+  kind: find
+  category: home_decor
+  photos:
+  - white-classical-statue-on-black-marble-base/img-1657.jpg
+  truth:
+    name: white classical statue on black marble base
+    brand: null
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: white-globe-lamp-on-travertine-cylinder-base
+  kind: find
+  category: home_decor
+  photos:
+  - white-globe-lamp-on-travertine-cylinder-base/img-1684.jpg
+  truth:
+    name: white globe lamp on travertine cylinder base
+    brand: null
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: white-sheepskin-rug
+  kind: find
+  category: home_decor
+  photos:
+  - white-sheepskin-rug/img-1587.jpg
+  truth:
+    name: white sheepskin rug
+    brand: null
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"
+- id: wooden-ladder-back-chair
+  kind: find
+  category: furniture
+  photos:
+  - wooden-ladder-back-chair/img-1590.jpg
+  truth:
+    name: wooden ladder back chair
+    brand: null
+    model: null
+    size: null
+    paid_usd: null
+    exact_urls: []
+  note: "\uFEFF"

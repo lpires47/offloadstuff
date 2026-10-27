@@ -132,7 +132,16 @@ def cmd_bench_init(args) -> None:
 def cmd_bench(args) -> None:
     from .bench import run_benchmark
 
-    out = run_benchmark(Path(args.file), _llm())
+    from .find.engine import AsUser, FindSettings, Sources
+    from .find.sources.asuser.providers import Consents, LocalProvider
+
+    sources = Sources.from_settings(FindSettings())
+    if args.as_user:
+        consents = Consents()
+        for site in args.as_user:
+            consents.grant("benchmark", site, ["search"])
+        sources.as_user = AsUser("benchmark", LocalProvider(), consents)
+    out = run_benchmark(Path(args.file), _llm(), sources, concurrency=args.concurrency)
     print((out / "summary.md").read_text())
     print(f"Saved to {out}")
 
@@ -258,6 +267,8 @@ def main(argv: list[str] | None = None) -> None:
 
     s = sub.add_parser("bench", help="run the Find-it benchmark")
     s.add_argument("file")
+    s.add_argument("--concurrency", type=int, default=3)
+    s.add_argument("--as-user", nargs="*", default=[], help="sites to search in a browser session, e.g. poshmark vinted")
     s.set_defaults(fn=cmd_bench)
 
     s = sub.add_parser("sites", help="list every source and whether it's on; --check queries them live")

@@ -41,6 +41,16 @@ item used, and similar pieces. You see the shopper's photos and/or description.
 PROFILE_SYSTEM = PROFILE_SYSTEM + "\n" + prompt_block()
 
 
+def _smaller(photo: Photo, edge: int = 1280) -> Photo:
+    """Search needs the item, not every thread: ~1.3K px reads tags fine and cuts model time a lot.
+    Full resolution stays for the listing identification, which reads small print."""
+    if max(photo.size) <= edge:
+        return photo
+    img = photo.image.copy()
+    img.thumbnail((edge, edge))
+    return Photo(img, photo.sha256, photo.source + "#search")
+
+
 def build_profile(
     llm: LLM,
     *,
@@ -51,7 +61,7 @@ def build_profile(
     if not photos and not text:
         raise ValueError("need photos or a description")
     cfg = cfg or default_settings()
-    content: list[dict] = [p.content_block() for p in photos]
+    content: list[dict] = [_smaller(p).content_block() for p in photos[:4]]
     ask = []
     if photos:
         ask.append(
