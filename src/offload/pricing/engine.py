@@ -22,6 +22,7 @@ Constants marked [estimate] are priors from the research, to be refit from our o
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Literal
@@ -102,6 +103,7 @@ class Observation:
     likes: int | None = None
     url: str | None = None
     title: str = ""
+    size: str | None = None
 
 
 @dataclass
@@ -143,9 +145,67 @@ class ItemFacts:
     tier_hint: Tier | None = None
     retail_cents: int | None = None
     season_family: str = "default"  # outerwear, swim, default
-    complete: bool = True  # tags/box/dust bag present when they matter
-    authenticated: bool = False
+    complete: bool = True  # tags/box/dust bag/papers present when they matter
+    authenticated: bool = False  # verified by a platform program or an authenticator
+    authenticity_risk: Literal["low", "check", "high", "not_applicable"] = "not_applicable"
+    flaws: list[str] = field(default_factory=list)  # severities of visible flaws: "minor"/"moderate"/"major"
+    size: str | None = None
+    size_scarcity: float | None = None  # this size's price vs the model's median, if measured from comps
+    years_since_release: float | None = None  # for current-era goods priced off retail
+    photo_count: int = 0
     platforms: list[str] = field(default_factory=lambda: ["ebay", "poshmark", "mercari", "depop", "offload"])
+
+
+@dataclass
+class Adjustment:
+    factor: float  # multiplier on market value
+    reason: str
+
+
+AUTH_SEGMENTS = ("luxury", "sneakers")
+
+
+def item_adjustments(facts: ItemFacts) -> list[Adjustment]:
+    """What this particular item has (or lacks) that a typical comparable listing doesn't.
+    Comps describe the market for the model in this condition; these move our item within it.
+    Every factor is a research-based prior [estimate] until our own sales refit it."""
+    adj: list[Adjustment] = []
+    seg = facts.segment
+    # Authenticity: proven authentic sells higher where fakes are common; unresolved doubt sells lower.
+    if seg in AUTH_SEGMENTS:
+        if facts.authenticated:
+            adj.append(Adjustment(1.08, "authenticated, which buyers pay more for where fakes are common"))
+        elif facts.authenticity_risk == "check":
+            adj.append(Adjustment(0.90, "not yet authenticated; buyers discount doubt. Authenticating usually pays"))
+    # Completeness: box, tags, dust bag, papers.
+    if not facts.complete:
+        loss = {"luxury": 0.88, "sneakers": 0.90}.get(seg, 0.97)
+        adj.append(Adjustment(loss, "missing original box, tags, dust bag or papers"))
+    # Flaws beyond what the condition grade already prices in (half weight to avoid double counting).
+    hit = {"minor": 0.02, "moderate": 0.07, "major": 0.18}
+    flaw_loss = min(0.45, sum(hit.get(f, 0.0) for f in facts.flaws)) * 0.5
+    if flaw_loss >= 0.01:
+        adj.append(Adjustment(1 - flaw_loss, f"{len(facts.flaws)} visible flaw(s) shown in the photos"))
+    # Size: measured scarcity wins; else priors for the extremes.
+    if facts.size_scarcity:
+        f = min(max(facts.size_scarcity, 0.7), 1.6)
+        adj.append(Adjustment(f, f"size {facts.size} sells {'above' if f > 1 else 'below'} the model's typical price"))
+    elif facts.size and seg == "sneakers":
+        m = re.search(r"\d+(\.\d+)?", facts.size)
+        n = float(m.group()) if m else None
+        if n is not None and n >= 13:
+            adj.append(Adjustment(1.06, f"size {facts.size} is scarce"))
+        elif n is not None and n <= 7:
+            adj.append(Adjustment(0.97, f"size {facts.size} has thinner demand"))
+    # Age: current-era goods priced from retail depreciate; luxury and design pieces hold or appreciate.
+    if facts.years_since_release and seg in ("fashion", "menswear", "general"):
+        f = max(0.6, 1 - 0.08 * min(facts.years_since_release, 5))
+        if f < 0.99:
+            adj.append(Adjustment(f, f"about {facts.years_since_release:g} years since release"))
+    # Photos: each photo beyond 3 is worth ~1-1.5% of price (eBay Motors), capped.
+    if facts.photo_count > 3:
+        adj.append(Adjustment(1 + min(0.06, 0.01 * (facts.photo_count - 3)), f"{facts.photo_count} photos"))
+    return adj
 
 
 # ---------- outputs ----------
@@ -175,6 +235,7 @@ class Valuation:
     drivers: list[str]  # plain-language reasons, shown to the seller
     evidence: dict[str, int]  # counts of each kind of evidence used
     flags: list[str] = field(default_factory=list)
+    adjustments: list[Adjustment] = field(default_factory=list)
 
     @property
     def best(self) -> PlatformPlan:
@@ -247,6 +308,10 @@ def _normalize(o: Observation, facts: ItemFacts) -> float:
     return math.log(max(price * adj, 100))
 
 
+def _size_key(size: str) -> str:
+    return "".join(ch for ch in size.lower() if ch.isalnum()).removeprefix("us").removeprefix("size")
+
+
 def _typical_shipping(segment: str) -> int:
     return {"furniture": 9000, "decor": 1500, "sneakers": 1400}.get(segment, 800)
 
@@ -307,7 +372,10 @@ def value_posterior(
 
     for o in obs:
         x = _normalize(o, facts)
-        weight = o.similarity ** 2 * _recency(o, today)
+        sim = o.similarity
+        if facts.size and o.size and _size_key(facts.size) != _size_key(o.size) and facts.segment in ("sneakers", "fashion", "menswear", "luxury"):
+            sim *= 0.85  # a different size is a slightly weaker comp
+        weight = sim ** 2 * _recency(o, today)
         if weight < 0.02:
             continue
         if o.status == "sold":
@@ -426,8 +494,13 @@ def value(
     today = today or date.today()
     if market.month is None:
         market.month = today.month
+    if facts.authenticity_risk == "high" and facts.segment in AUTH_SEGMENTS:
+        raise ValueError("authenticity risk is high: route to an authenticator before pricing or listing")
     tier = infer_tier(facts, obs)
     grid, probs, counts, notes = value_posterior(facts, obs, offers, market, today=today)
+    adjustments = item_adjustments(facts)
+    shift = sum(math.log(a.factor) for a in adjustments)
+    grid = [g + shift for g in grid]  # this item's value = market value for the model x its own factors
 
     # Predictive spread = uncertainty about value + item-level noise for this tier.
     q10, q50, q90 = (_quantile(grid, probs, q) for q in (0.1, 0.5, 0.9))
@@ -485,9 +558,10 @@ def value(
     if facts.retail_cents:
         drivers.append(f"retail ${facts.retail_cents / 100:,.0f}, adjusted for condition ({facts.condition.replace('_', ' ')})")
     drivers += notes + market_notes
+    drivers += [f"{'+' if a.factor > 1 else '−'}{abs(round((a.factor - 1) * 100))}%: {a.reason}" for a in adjustments]
     flags = []
-    if not facts.complete and facts.segment in ("luxury", "sneakers"):
-        flags.append("Missing box, tags or dust bag usually costs 10-20% here")
+    if facts.segment in AUTH_SEGMENTS and not facts.authenticated and facts.authenticity_risk == "check":
+        flags.append("Authenticate before listing: it removes the doubt discount and opens eBay's guarantee")
     if tier == "D":
         flags.append("No close comps: consider an auction with a reserve at the hidden minimum")
     return Valuation(
@@ -502,6 +576,7 @@ def value(
         drivers=drivers,
         evidence=counts,
         flags=flags,
+        adjustments=adjustments,
     )
 
 

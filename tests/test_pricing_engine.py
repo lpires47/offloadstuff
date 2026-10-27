@@ -129,3 +129,26 @@ def test_next_step_order():
     assert next_step(facts, comps(), nobody, "mercari", today=TODAY).action == "price_drop"
     fair = Engagement(days_listed=3, views=40, current_ask_cents=20500)
     assert next_step(facts, comps(), fair, "mercari", today=TODAY).action == "hold"
+
+
+def test_item_factors_authenticity_completeness_flaws_size_age():
+    base = value(jacket(segment="luxury"), comps(), today=TODAY).value_cents
+    authed = value(jacket(segment="luxury", authenticated=True), comps(), today=TODAY)
+    doubt = value(jacket(segment="luxury", authenticity_risk="check"), comps(), today=TODAY)
+    incomplete = value(jacket(segment="luxury", complete=False), comps(), today=TODAY).value_cents
+    flawed = value(jacket(segment="luxury", flaws=["major", "moderate"]), comps(), today=TODAY).value_cents
+    assert authed.value_cents > base > doubt.value_cents and incomplete < base and flawed < base
+    assert any("Authenticate" in f for f in doubt.flags)
+    assert any("authenticated" in d for d in authed.drivers)
+    with pytest.raises(ValueError, match="authenticator"):
+        value(jacket(segment="luxury", authenticity_risk="high"), comps(), today=TODAY)
+    big = value(jacket(segment="sneakers", size="US 14"), comps(), today=TODAY).value_cents
+    assert big > value(jacket(segment="sneakers", size="US 10"), comps(), today=TODAY).value_cents
+    old = value(jacket(years_since_release=4), comps(n=1), today=TODAY).value_cents
+    assert old < value(jacket(), comps(n=1), today=TODAY).value_cents
+
+
+def test_same_size_comps_count_more():
+    facts = jacket(segment="sneakers", size="US 10", retail_cents=None)
+    obs = [sold(20000, size="US 10") for _ in range(4)] + [sold(30000, size="US 13") for _ in range(4)]
+    assert value(facts, obs, today=TODAY).value_cents < 25000

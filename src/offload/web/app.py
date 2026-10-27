@@ -161,7 +161,7 @@ async def api_sell(photos: list[UploadFile] = File(...), speed: str = Form("bala
         "swim" if "swim" in ident.subcategory.lower() else "default")
     valuation = (
         value_from_ladder(final, segment=segment_of(profile), condition=ident.condition, speed=speed,  # type: ignore[arg-type]
-                          season_family=season)
+                          season_family=season, identification=ident, photo_count=len(pics))
         if final else None
     )
     price = as_estimate(valuation) if valuation else None
@@ -190,6 +190,7 @@ async def api_sell(photos: list[UploadFile] = File(...), speed: str = Form("bala
             "p_sold": valuation.p_sold,
             "median_days": valuation.median_days,
             "evidence": valuation.evidence,
+            "adjustments": [{"factor": a.factor, "reason": a.reason} for a in valuation.adjustments],
             "platforms": [p.__dict__ for p in valuation.plans],
             "comps": [
                 {"title": r.listing.title, "price_cents": r.listing.price_cents, "url": r.listing.url,

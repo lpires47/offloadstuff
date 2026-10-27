@@ -47,6 +47,7 @@ def observations(ladder: Ladder) -> list[Observation]:
                 likes=x.likes,
                 url=x.url,
                 title=x.title,
+                size=x.attributes.get("size"),
             )
         )
     return obs
@@ -82,9 +83,20 @@ def value_from_ladder(
     speed: Speed = "balanced",
     platforms: list[str] | None = None,
     season_family: str = "default",
+    identification=None,
+    photo_count: int = 0,
 ) -> Valuation | None:
     facts = ItemFacts(segment=segment, condition=condition, retail_cents=retail_cents(ladder),
-                      season_family=season_family)
+                      season_family=season_family, photo_count=photo_count)
+    if identification is not None:  # what this specific item is, has and lacks
+        i = identification
+        facts.authenticity_risk = i.authenticity_risk
+        facts.flaws = [f.severity for f in i.flaws]
+        facts.size = i.size.value if i.size.value and i.size.confidence >= 0.8 else None
+        named = {a.name.lower(): (a.value or "").lower() for a in i.attributes}
+        for key in ("original box", "dust bag", "box and papers", "tags"):
+            if named.get(key) in ("no", "missing", "none", "without"):
+                facts.complete = False
     if platforms:
         facts.platforms = platforms
     obs = observations(ladder)
