@@ -95,6 +95,7 @@ def ladder_dict(ladder: Ladder) -> dict:
         "exact_used": [res(r) for r in ladder.exact_used],
         "similar": [res(r) for r in ladder.similar[:30]],
         "ebay": [res(r) for r in ladder.ebay[:20]],
+        "sold": [res(r) for r in ladder.sold[:20]],
         "typical_used_cents": ladder.typical_used_cents,
         "sources_searched": ladder.sources_searched,
         "sources_failed": ladder.sources_failed,

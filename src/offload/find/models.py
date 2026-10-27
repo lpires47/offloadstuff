@@ -146,9 +146,10 @@ class Ladder:
     exact_used: list[Result] = field(default_factory=list)
     similar: list[Result] = field(default_factory=list)
     ebay: list[Result] = field(default_factory=list)  # shown as its own module; see SEPARATE_DISPLAY_SOURCES
+    sold: list[Result] = field(default_factory=list)  # recently sold (not buyable): for prices and context
     typical_used_cents: int | None = None  # median ask of non-eBay exact used listings, for the badge
     sources_searched: list[str] = field(default_factory=list)
     sources_failed: dict[str, str] = field(default_factory=dict)
 
     def all(self) -> list[Result]:
-        return [*self.exact_new, *self.exact_used, *self.similar, *self.ebay]
+        return [*self.exact_new, *self.exact_used, *self.similar, *self.ebay, *self.sold]

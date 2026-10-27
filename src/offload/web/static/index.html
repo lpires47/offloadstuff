@@ -95,6 +95,7 @@ function ladderView(L, stage){
     sec("The exact item, new", L.exact_new, stage === "final" ? "Not found new right now." : "Searching…") +
     sec("The exact item, used", L.exact_used, stage === "final" ? "No used listings of this exact item right now." : "Searching…", typical) +
     sec("Similar", L.similar, stage === "final" ? "Nothing close enough yet." : "Searching…") +
+    ((L.sold || []).length ? `<h2>Recently sold · ${L.sold.length}</h2><div class="grid">${L.sold.map(r => card({...r, reason: "Sold" + (r.listing.sold_on ? " " + r.listing.sold_on : "")})).join("")}</div>` : "") +
     ((L.ebay || []).length ? `<div class="ebay"><h2>On eBay · ${L.ebay.length}</h2><div class="grid">${L.ebay.map(r => card({...r, reason: {exact_new: "Exact item, new", exact_used: "Exact item, used", similar: "Similar"}[r.rung]})).join("")}</div></div>` : "") + `</div>`;
 }
 

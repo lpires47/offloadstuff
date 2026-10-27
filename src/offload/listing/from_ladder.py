@@ -29,7 +29,7 @@ def _similarity(r: Result) -> float:
 
 def observations(ladder: Ladder) -> list[Observation]:
     obs = []
-    for r in [*ladder.exact_used, *ladder.similar]:
+    for r in [*ladder.exact_used, *ladder.similar, *ladder.sold]:
         x = r.listing
         if not x.price_cents or x.source in NO_PRICING_SOURCES:
             continue
@@ -53,7 +53,8 @@ def observations(ladder: Ladder) -> list[Observation]:
 
 
 def market_state(ladder: Ladder) -> MarketState:
-    exact = [r.listing for r in ladder.exact_used if r.listing.source not in NO_PRICING_SOURCES]
+    exact = [r.listing for r in [*ladder.exact_used, *ladder.sold]
+             if r.rung != "similar" and r.listing.source not in NO_PRICING_SOURCES]
     sold = [x for x in exact if x.status == "sold"]
     active = [x for x in exact if x.status == "active"]
     recent_new = [x for x in active if x.days_listed is not None and x.days_listed <= 30]

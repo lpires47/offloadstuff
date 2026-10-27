@@ -101,6 +101,8 @@ def assemble(profile: ItemProfile, results: list[Result]) -> Ladder:
     for r in results:
         if r.listing.source in SEPARATE_DISPLAY_SOURCES:
             ladder.ebay.append(r)
+        elif r.listing.status == "sold":
+            ladder.sold.append(r)
         else:
             getattr(ladder, r.rung).append(r)
     priced = sorted(
@@ -118,6 +120,7 @@ def assemble(profile: ItemProfile, results: list[Result]) -> Ladder:
     ladder.exact_new.sort(key=lambda r: (r.listing.available is False, r.listing.price_cents or big))
     ladder.exact_used.sort(key=lambda r: (r.listing.available is False, r.confidence < 0.75, r.listing.price_cents or big))
     ladder.similar.sort(key=lambda r: -r.score)
+    ladder.sold.sort(key=lambda r: (r.rung == "similar", r.listing.sold_on or ""), reverse=False)
     return ladder
 
 
