@@ -137,6 +137,54 @@ def cmd_bench(args) -> None:
     print(f"Saved to {out}")
 
 
+def cmd_sites(args) -> None:
+    """Every source: what it is, whether it's on, and (with --check) whether it answers right now."""
+    import asyncio
+
+    import httpx
+
+    from .find.engine import FindSettings, Sources
+    from .find.models import DefiningDetail, ItemProfile
+    from .find.sources.base import SearchPlan
+    from .find.sources.sites.registry import CONNECTORS, NOT_CONNECTED, enabled_names
+
+    on = set(enabled_names())
+    src = Sources.from_settings(FindSettings())
+    rows = [("ebay (official API)", "on" if src.ebay else "needs EBAY_CLIENT_ID/SECRET"),
+            ("etsy (official API)", "on" if src.etsy else "needs ETSY_API_KEY"),
+            ("web search (Brave)", "on" if src.web else "needs BRAVE_API_KEY")]
+    rows += [(f"{n} (direct)", "on" if n in on else "off: set OFFLOAD_ENABLED_SITES") for n in CONNECTORS]
+    rows += [(f"{n}", f"not connected: {why}") for n, why in NOT_CONNECTED.items()]
+    for name, status in rows:
+        print(f"{name:<28} {status}")
+    if not args.check:
+        return
+    q = args.query
+    profile = ItemProfile(category="apparel", subcategory="jeans", brand=None, brand_confidence=0, model_name=None,
+                          model_confidence=0, designer=None, variant=None, style_code=None, gtin=None, era=None,
+                          materials=[], colors=[], attributes=[], defining_details=[DefiningDetail(detail=q, why="", must_match=True)],
+                          exact_queries=[q], similar_queries=[], reproduction_risk="low", notes="")
+    plan = SearchPlan(profile, [q], [])
+
+    async def check():
+        async with httpx.AsyncClient(timeout=8) as client:
+            targets = [(n, CONNECTORS[n]()) for n in CONNECTORS if n in on]
+            if src.ebay:
+                targets.append(("ebay", src.ebay))
+            if src.etsy:
+                targets.append(("etsy", src.etsy))
+            for name, conn in targets:
+                try:
+                    out = await conn.search(plan, client)
+                    priced = sum(1 for x in out if x.price_cents)
+                    print(f"  {name:<12} OK  {len(out)} results, {priced} priced, e.g. {out[0].title[:50] if out else '-'}")
+                except Exception as e:  # noqa: BLE001
+                    print(f"  {name:<12} FAIL {type(e).__name__}: {str(e)[:120]}")
+
+    print(f"\nLive check for {q!r}:")
+    asyncio.run(check())
+
+
 def cmd_serve(args) -> None:
     import uvicorn
 
@@ -185,6 +233,11 @@ def main(argv: list[str] | None = None) -> None:
     s = sub.add_parser("bench", help="run the Find-it benchmark")
     s.add_argument("file")
     s.set_defaults(fn=cmd_bench)
+
+    s = sub.add_parser("sites", help="list every source and whether it's on; --check queries them live")
+    s.add_argument("--check", action="store_true")
+    s.add_argument("--query", default="levis 501")
+    s.set_defaults(fn=cmd_sites)
 
     s = sub.add_parser("serve", help="run the test app")
     s.add_argument("--host", default="0.0.0.0")

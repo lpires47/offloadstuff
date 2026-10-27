@@ -31,6 +31,7 @@ from .sources.base import SearchPlan, Source
 from .sources.ebay import EbayBrowse
 from .sources.etsy import EtsySource
 from .sources.shopify import ShopifyStores
+from .sources.sites.registry import enabled_connectors
 from .sources.websearch import BraveSearch, WebSearchSource
 
 
@@ -59,6 +60,7 @@ class Sources:
     etsy: EtsySource | None = None
     web: BraveSearch | None = None
     shopify: ShopifyStores | None = None
+    sites: bool = True  # direct site connectors named in OFFLOAD_ENABLED_SITES
     extra: list[Source] = field(default_factory=list)  # tests and future connectors
 
     @classmethod
@@ -173,8 +175,15 @@ async def find(
             pending.add(asyncio.create_task(run("etsy", sources.etsy.search(plan, client))))
         if sources.shopify is not None and plan.shopify_stores:
             pending.add(asyncio.create_task(run("shopify", sources.shopify.search(plan, client))))
+        direct = enabled_connectors(rt.segment) if sources.sites else []
+        for conn in direct:
+            pending.add(asyncio.create_task(run(conn.name, conn.search(plan, client))))
+        direct_domains = {c.domain for c in direct}
         if sources.web is not None:
             for group in rt.resale_groups:
+                group = [d for d in group if d not in direct_domains]  # covered directly
+                if not group:
+                    continue
                 ws = WebSearchSource(f"web:{'+'.join(group)}", sources.web, domains=group, group="resale")
                 pending.add(asyncio.create_task(run(ws.name, ws.search(plan, client))))
             if profile.exact_queries:
