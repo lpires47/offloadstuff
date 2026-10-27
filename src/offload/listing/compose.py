@@ -104,10 +104,10 @@ def build_description(a: ItemAnalysis, pkg: Package) -> str:
         label = "Measurements" if d.method == "known_product_spec" else "Approx. measurements"
         dims = f"{d.width_in:g} x {d.height_in:g}" + (f" x {d.depth_in:g}" if d.depth_in else "") + " in"
         details.append(f"{label}: {dims}" + (f" ({d.note})" if d.note else ""))
-    for a in i.attributes:
-        if a.value and a.confidence >= 0.75 and a.name.lower() not in ("size", "color", "material", "brand"):
-            label = "Approx. " + a.name if a.source == "estimated" else a.name.capitalize()
-            details.append(f"{label}: {a.value}")
+    for pa in i.attributes:
+        if pa.value and pa.confidence >= 0.75 and pa.name.lower() not in ("size", "color", "material", "brand"):
+            label = "Approx. " + pa.name if pa.source == "estimated" else pa.name.capitalize()
+            details.append(f"{label}: {pa.value}")
     if details:
         lines.append(" · ".join(details))
     return "\n".join(lines)
@@ -135,10 +135,10 @@ def compose_listing(a: ItemAnalysis, price: PriceEstimate) -> ListingDraft:
     }
     if "size" not in attributes:
         attributes.pop("size_system", None)
-    for a in i.attributes:  # product-type specifics (rise, seat height, pocket count...) when confident
-        key = a.name.lower()
-        if a.value and a.confidence >= 0.75 and key not in attributes and a.source != "estimated":
-            attributes[key] = a.value
+    for pa in i.attributes:  # product-type specifics (rise, seat height, pocket count...) when confident
+        key = pa.name.lower()
+        if pa.value and pa.confidence >= 0.75 and key not in attributes and pa.source != "estimated":
+            attributes[key] = pa.value
     return ListingDraft(
         title=build_title(a),
         description=build_description(a, pkg),
