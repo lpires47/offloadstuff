@@ -282,7 +282,7 @@ def test_engine_streams_profile_sources_and_final_ladder(tmp_path):
         return Verdicts(verdicts=out)
 
     llm = ScriptedLLM([cesca(), verdicts])
-    srcs = Sources(extra=[FakeSource("fast", items[:3]), FakeSource("slow", items[3:], delay=0.05),
+    srcs = Sources(sites=False, extra=[FakeSource("fast", items[:3]), FakeSource("slow", items[3:], delay=0.05),
                           FakeSource("broken", [], fail=True)])
     fs = FindSettings(router_stats_file=tmp_path / "none.json", shopify_stores_file=tmp_path / "none.txt",
                       verify_batch=8)
@@ -343,7 +343,7 @@ def test_benchmark_runs_and_scores(tmp_path):
                                                    looks="used", confidence=0.9, reason="same") for i in range(n)])
 
     fs = FindSettings(router_stats_file=tmp_path / "x.json", shopify_stores_file=tmp_path / "x.txt")
-    out = run_benchmark(path, ScriptedLLM([cesca(), all_exact]), Sources(extra=[FakeSource("fake", items)]), fs)
+    out = run_benchmark(path, ScriptedLLM([cesca(), all_exact]), Sources(sites=False, extra=[FakeSource("fake", items)]), fs)
     summary = (out / "summary.md").read_text()
     assert "| Brand right | 100% of 1 |" in summary and "| Found the exact item used | 100% of 1 |" in summary
     judge = json.loads((out / "judge.json").read_text())

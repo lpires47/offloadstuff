@@ -11,12 +11,18 @@ from __future__ import annotations
 import os
 
 from .base import SiteConnector
+from .aptdeco import AptDeco
+from .chairish import Chairish
+from .firstdibs import FirstDibs
 from .grailed import Grailed
 from .poshmark import Poshmark
 
 CONNECTORS: dict[str, type[SiteConnector]] = {
     "poshmark": Poshmark,
     "grailed": Grailed,
+    "1stdibs": FirstDibs,  # official MCP server: on by default
+    "chairish": Chairish,
+    "aptdeco": AptDeco,
 }
 
 # Why each site isn't a connector (yet). Shown by `offload sites`.
@@ -31,12 +37,23 @@ NOT_CONNECTED = {
     "goat": "Cloudflare; affiliate via Awin",
     "fashionphile": "endpoint unconfirmed; affiliate via Rakuten",
     "facebook": "no read API; hand-off links to the shopper's own Marketplace search",
+    "kaiyo": "plain requests refused (bot wall); partnership or affiliate",
+    "liveauctioneers": "ToS bans automated access; sold prices behind login. Ask for a data license",
+    "invaluable": "ToS bans automated access; sold prices behind login. Ask for a data license",
+    "offerup": "ToS bans third-party apps",
+    "rubylane": "challenge page on plain requests",
+    "pamono": "terms silent on automation; connector not built yet (cross-lists with Chairish)",
 }
 
 
 def enabled_names() -> list[str]:
+    """Official interfaces are on unless named in OFFLOAD_DISABLED_SITES; the rest only if named in
+    OFFLOAD_ENABLED_SITES."""
     raw = os.environ.get("OFFLOAD_ENABLED_SITES", "")
-    return [s.strip().lower() for s in raw.split(",") if s.strip()]
+    named = [s.strip().lower() for s in raw.split(",") if s.strip()]
+    off = {s.strip().lower() for s in os.environ.get("OFFLOAD_DISABLED_SITES", "").split(",") if s.strip()}
+    official = [n for n, c in CONNECTORS.items() if getattr(c, "official", False)]
+    return [n for n in dict.fromkeys(official + named) if n not in off]
 
 
 def enabled_connectors(segment: str) -> list[SiteConnector]:

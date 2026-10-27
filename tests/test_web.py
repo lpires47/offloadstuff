@@ -33,7 +33,7 @@ def setup(monkeypatch, tmp_path, llm):
     items = [lst("Knoll Cesca Chair cane", 40000 + i * 2000, f"https://a/{i}") for i in range(6)]
     web._state.clear()
     web._state["llm"] = llm
-    web._state["sources"] = Sources(extra=[FakeSource("fake", items)])
+    web._state["sources"] = Sources(sites=False, extra=[FakeSource("fake", items)])
     return TestClient(web.app)
 
 

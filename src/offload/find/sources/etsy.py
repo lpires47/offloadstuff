@@ -13,7 +13,7 @@ from .base import SearchPlan
 
 class EtsySource:
     name = "etsy"
-    URL = "https://openapi.etsy.com/v3/application/listings/active"
+    URL = "https://api.etsy.com/v3/application/listings/active"  # x-api-key: "keystring:shared_secret" since 2026-02-09
 
     def __init__(self, api_key: str) -> None:
         self.api_key = api_key

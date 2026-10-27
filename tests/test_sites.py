@@ -89,7 +89,62 @@ def test_refusal_benches_the_site_and_does_not_retry():
 
 def test_connectors_are_off_unless_enabled(monkeypatch):
     monkeypatch.delenv("OFFLOAD_ENABLED_SITES", raising=False)
+    monkeypatch.delenv("OFFLOAD_DISABLED_SITES", raising=False)
     assert enabled_connectors("fashion") == []
+    assert [c.name for c in enabled_connectors("furniture")] == ["1stdibs"]  # official interface only
     monkeypatch.setenv("OFFLOAD_ENABLED_SITES", "poshmark, grailed")
     assert {c.name for c in enabled_connectors("menswear")} == {"poshmark", "grailed"}
+    monkeypatch.setenv("OFFLOAD_DISABLED_SITES", "1stdibs")
     assert enabled_connectors("furniture") == []
+
+
+def test_1stdibs_mcp_session_and_parse():
+    from offload.find.sources.sites.firstdibs import FirstDibs
+
+    calls = []
+
+    def handler(req: httpx.Request):
+        msg = json.loads(req.content)
+        calls.append(msg["method"])
+        if msg["method"] == "initialize":
+            return httpx.Response(200, json={"jsonrpc": "2.0", "id": msg["id"], "result": {"protocolVersion": "2025-06-18"}},
+                                  headers={"mcp-session-id": "s1"})
+        if msg["method"] == "notifications/initialized":
+            return httpx.Response(202)
+        assert req.headers["mcp-session-id"] == "s1" and msg["params"]["name"] == "search_items"
+        payload = {"items": [{"title": "Marcel Breuer Cesca Chairs, Set of 4", "price": {"amount": 2400},
+                              "url": "/furniture/seating/dining-room-chairs/cesca/id-f_123/",
+                              "creator": {"name": "Marcel Breuer"}, "period": "1970-1979", "images": ["https://a.1stdibscdn.com/x.jpg"]}]}
+        body = "event: message\ndata: " + json.dumps({"jsonrpc": "2.0", "id": msg["id"],
+                                                      "result": {"content": [{"type": "text", "text": json.dumps(payload)}]}})
+        return httpx.Response(200, text=body, headers={"content-type": "text/event-stream"})
+
+    out = run(FirstDibs(), handler, SearchPlan(cesca(), ["breuer cesca chair"], []))
+    assert calls[:2] == ["initialize", "notifications/initialized"]
+    x = out[0]
+    assert x.url.startswith("https://www.1stdibs.com/furniture/") and x.price_cents == 240000
+    assert x.brand == "Marcel Breuer" and x.attributes["period"] == "1970-1979"
+
+
+def test_chairish_embedded_map():
+    from offload.find.sources.sites.chairish import Chairish
+
+    html = """<script>var PRODUCT_ID_TO_PRODUCT_JSON_MAP = {"123": {"title": "Pair of Cesca Chairs",
+      "price": "650.00", "url": "/product/123/pair-of-cesca-chairs", "image_url": "https://chairish-prod/x.jpg",
+      "width": 18, "depth": 22, "height": 31, "item_type": "V"}};
+    window.foo = 1;</script>"""
+    (x,) = Chairish.parse_page(html)
+    assert x.url == "https://www.chairish.com/product/123/pair-of-cesca-chairs" and x.price_cents == 65000
+    assert x.attributes["height"] == "31" and x.condition == "used"
+
+
+def test_aptdeco_next_data():
+    from offload.find.sources.sites.aptdeco import AptDeco
+
+    data = {"props": {"pageProps": {"listing": {"products": [
+        {"name": "West Elm Mid-Century Sofa", "price": 450, "slug": "products/west-elm-sofa-1", "brand": "West Elm",
+         "retailPrice": 1299, "city": "Brooklyn"}]}}}}
+    html = f'<script id="__NEXT_DATA__" type="application/json">{json.dumps(data)}</script>'
+    (x,) = AptDeco.parse_page(html)
+    assert x.url == "https://www.aptdeco.com/products/west-elm-sofa-1" and x.price_cents == 45000
+    assert x.location == "Brooklyn" and x.attributes["retail"] == "1299"
