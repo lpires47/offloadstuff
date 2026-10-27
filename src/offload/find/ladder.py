@@ -60,6 +60,8 @@ def text_score(profile: ItemProfile, listing: Listing) -> TextScore:
     name = words(profile.brand) | words(profile.model_name)
     name_match = len(name & tw) / len(name) if name else 0.0
     detail_words = set().union(*(words(d.detail) for d in profile.defining_details)) if profile.defining_details else set()
+    if not detail_words:  # first look has no details yet: its similar queries describe the design
+        detail_words = set().union(*(words(q) for q in profile.similar_queries)) if profile.similar_queries else set()
     detail_overlap = len(detail_words & tw) / len(detail_words) if detail_words else 0.0
     score = (2.0 if code_match else 0.0) + name_match + 0.5 * detail_overlap
     return TextScore(code_match, name_match, detail_overlap, score)
