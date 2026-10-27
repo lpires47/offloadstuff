@@ -24,6 +24,7 @@ from offload.llm import LLM
 
 from . import ladder as L
 from .models import ItemProfile, Ladder, Listing, Result
+from .deeplinks import handoff_links
 from .profile import build_profile
 from .router import RouterStats, load_shopify_stores, route
 from .sources.base import SearchPlan, Source
@@ -125,6 +126,7 @@ async def find(
     cfg: Settings | None = None,
     client: httpx.AsyncClient | None = None,
     profile: ItemProfile | None = None,
+    city_slug: str = "sanfrancisco",
 ) -> AsyncIterator[dict]:
     fs = fs or FindSettings()
     cfg = cfg or default_settings()
@@ -155,6 +157,8 @@ async def find(
         stats = RouterStats.load(fs.router_stats_file) if fs.router_stats_file.exists() else None
         rt = route(profile, stats, load_shopify_stores(fs.shopify_stores_file))
         yield {"type": "route", "ms": ms(), "segment": rt.segment, "groups": rt.resale_groups}
+        yield {"type": "handoff", "ms": ms(),
+               "links": handoff_links(profile.exact_queries, profile.similar_queries, rt.segment, city_slug)}
 
         plan = SearchPlan(
             profile=profile,

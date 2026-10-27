@@ -95,7 +95,11 @@ async def health():
 
 
 @app.post("/api/find")
-async def api_find(photos: list[UploadFile] | None = File(None), text: str | None = Form(None)):
+async def api_find(
+    photos: list[UploadFile] | None = File(None),
+    text: str | None = Form(None),
+    city: str = Form("sanfrancisco"),
+):
     pics = await _photos(photos)
     if not pics and not (text and text.strip()):
         raise HTTPException(400, "send a photo or a description")
@@ -104,7 +108,7 @@ async def api_find(photos: list[UploadFile] | None = File(None), text: str | Non
     async def stream():
         segment = None
         try:
-            async for event in find(llm(), photos=pics, text=text, sources=sources()):
+            async for event in find(llm(), photos=pics, text=text, sources=sources(), city_slug=city):
                 if event["type"] == "route":
                     segment = event["segment"]
                 if event["type"] == "ladder" and event["stage"] == "final" and segment:

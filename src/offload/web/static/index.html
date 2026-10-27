@@ -120,6 +120,7 @@ $("#find-go").onclick = async () => {
       const ev = JSON.parse(buf.slice(0, nl)); buf = buf.slice(nl + 1);
       run = ev.run || run; segment = ev.segment || segment;
       if (ev.type === "profile") { $("#find-profile").innerHTML = profileView(ev.profile); status.textContent = "Searching stores and resale sites…"; }
+      if (ev.type === "handoff" && ev.links.length) { $("#find-profile").insertAdjacentHTML("beforeend", `<div class="chips" style="margin-top:10px">${ev.links.map(l => `<a class="chip" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)} ↗</a>`).join("")}</div>`); }
       if (ev.type === "source") { sources.push(ev.error ? `${ev.source} ✕` : `${ev.source.split(":")[0]} ${ev.count}`); status.textContent = `Searched: ${sources.join(" · ")}`; }
       if (ev.type === "ladder") { $("#ladder").innerHTML = ladderView(ev.ladder, ev.stage); if (ev.stage === "final") status.textContent = `Done in ${(ev.ms/1000).toFixed(1)}s · ${ev.ladder.sources_searched.length} sources`; else status.textContent = "Checking which ones are the exact item…"; }
       if (ev.type === "error") status.textContent = "Error: " + ev.message;

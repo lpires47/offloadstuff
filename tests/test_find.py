@@ -348,3 +348,12 @@ def test_benchmark_runs_and_scores(tmp_path):
     assert "| Brand right | 100% of 1 |" in summary and "| Found the exact item used | 100% of 1 |" in summary
     judge = json.loads((out / "judge.json").read_text())
     assert judge[0]["id"] == "cesca-01" and len(judge[0]["results"]["exact_used"]) == 3
+
+
+def test_marketplace_handoff_links():
+    from offload.find.deeplinks import facebook_marketplace, handoff_links
+
+    url = facebook_marketplace("knoll cesca chair", "sanfrancisco", max_price=40000)
+    assert url == "https://www.facebook.com/marketplace/sanfrancisco/search/?query=knoll+cesca+chair&maxPrice=400"
+    links = handoff_links(["Knoll Cesca chair"], ["cantilever cane chair"], "furniture", "oakland")
+    assert len(links) == 2 and "/marketplace/oakland/" in links[0]["url"]
