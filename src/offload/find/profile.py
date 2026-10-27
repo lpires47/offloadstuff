@@ -61,7 +61,7 @@ def build_profile(
         ask.append(f"Shopper's description: {text}")
     content.append({"type": "text", "text": "\n".join(ask)})
     return llm.parse(
-        model=cfg.vision_model,
+        model=cfg.detect_model,  # Sonnet: ~3x faster than Opus here; the vision check backs it up
         system=PROFILE_SYSTEM,
         content=content,
         output_model=ItemProfile,

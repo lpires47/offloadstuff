@@ -35,7 +35,7 @@ def observations(ladder: Ladder) -> list[Observation]:
             continue
         obs.append(
             Observation(
-                price_cents=x.price_cents,
+                price_cents=x.unit_price_cents,  # a pair at $400 is $200 a chair
                 status=x.status,
                 platform=x.source.split(":")[-1].removesuffix(".com"),
                 similarity=_similarity(r),

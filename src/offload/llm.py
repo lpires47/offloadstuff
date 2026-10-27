@@ -35,9 +35,15 @@ class AnthropicLLM:
 
     def __init__(self, client: Any | None = None) -> None:
         if client is None:
+            import os
+
             import anthropic
 
-            client = anthropic.Anthropic()
+            # Always the public API with our own key, never a base URL inherited from the environment.
+            client = anthropic.Anthropic(
+                api_key=os.environ.get("ANTHROPIC_API_KEY"),
+                base_url=os.environ.get("OFFLOAD_ANTHROPIC_BASE_URL", "https://api.anthropic.com"),
+            )
         self._client = client
 
     def parse(self, *, model, system, content, output_model, max_tokens=4096):

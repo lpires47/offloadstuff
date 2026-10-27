@@ -96,8 +96,34 @@ def _badge(price: int | None, typical: int | None):
     return "typical"
 
 
+NUM = {"two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "eight": 8, "ten": 10, "twelve": 12}
+_SET = re.compile(r"\b(?:set of|lot of|group of)\s+(\d+|two|three|four|five|six|eight|ten|twelve)\b|"
+                  r"\b(\d+|two|three|four|five|six|eight|ten|twelve)\s+(?:\w+\s+){0,3}?(?:chairs|stools|armchairs|lamps|pieces|bowls|plates|glasses)\b|"
+                  r"^(\d+|two|three|four|five|six|eight|ten|twelve)\b(?=.*\b(?:chairs|stools|armchairs|lamps|pieces|bowls)\b)|"
+                  r"\bx\s?(\d+)\b|\b(pair)\b", re.I)
+PER_UNIT = re.compile(r"\b(price|priced|sold)\s+(per|each)\b|\(each\)|\beach\b", re.I)
+MULTIPLES = ("furniture", "home_decor", "kitchen")
+
+
+def units_in_title(title: str) -> int:
+    """'Pair of Cesca chairs' -> 2, 'Set of four' -> 4, 'Price per chair' -> 1."""
+    if PER_UNIT.search(title):
+        return 1
+    m = _SET.search(title)
+    if not m:
+        return 1
+    raw = next(g for g in m.groups() if g)
+    if raw.lower() == "pair":
+        return 2
+    n = NUM.get(raw.lower()) or (int(raw) if raw.isdigit() else 1)
+    return n if 1 < n <= 24 else 1
+
+
 def assemble(profile: ItemProfile, results: list[Result]) -> Ladder:
     ladder = Ladder()
+    if profile.category in MULTIPLES:
+        for r in results:
+            r.listing.quantity = units_in_title(r.listing.title)
     for r in results:
         if r.listing.source in SEPARATE_DISPLAY_SOURCES:
             ladder.ebay.append(r)
@@ -106,19 +132,19 @@ def assemble(profile: ItemProfile, results: list[Result]) -> Ladder:
         else:
             getattr(ladder, r.rung).append(r)
     priced = sorted(
-        r.listing.price_cents
+        r.listing.unit_price_cents
         for r in ladder.exact_used
         if r.listing.price_cents and r.listing.source not in NO_PRICING_SOURCES
     )
     if len(priced) >= 4:
-        ladder.typical_used_cents = int(statistics.median(priced))
+        ladder.typical_used_cents = int(statistics.median(priced))  # per unit
         for r in ladder.exact_used:
-            r.price_badge = _badge(r.listing.price_cents, ladder.typical_used_cents)
+            r.price_badge = _badge(r.listing.unit_price_cents, ladder.typical_used_cents)
     big = 10**12
     rung_order = {"exact_new": 0, "exact_used": 1, "similar": 2}
     ladder.ebay.sort(key=lambda r: (rung_order[r.rung], -r.score if r.rung == "similar" else r.listing.price_cents or big))
-    ladder.exact_new.sort(key=lambda r: (r.listing.available is False, r.listing.price_cents or big))
-    ladder.exact_used.sort(key=lambda r: (r.listing.available is False, r.confidence < 0.75, r.listing.price_cents or big))
+    ladder.exact_new.sort(key=lambda r: (r.listing.available is False, r.listing.unit_price_cents or big))
+    ladder.exact_used.sort(key=lambda r: (r.listing.available is False, r.confidence < 0.75, r.listing.unit_price_cents or big))
     ladder.similar.sort(key=lambda r: -r.score)
     ladder.sold.sort(key=lambda r: (r.rung == "similar", r.listing.sold_on or ""), reverse=False)
     return ladder

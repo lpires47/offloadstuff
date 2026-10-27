@@ -102,6 +102,11 @@ class Listing:
     sold_price_is_list: bool = False  # the site shows the last ask on sold items, not what was paid
     likes: int | None = None
     attributes: dict[str, str] = field(default_factory=dict)  # size, dimensions, material... as the site lists them
+    quantity: int = 1  # units in the lot ("pair", "set of 4"); prices compare per unit
+
+    @property
+    def unit_price_cents(self) -> int | None:
+        return None if self.price_cents is None else self.price_cents // max(self.quantity, 1)
     fetched_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     @property

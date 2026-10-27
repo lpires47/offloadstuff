@@ -52,6 +52,7 @@ class FindSettings:
     )
     source_timeout_s: float = 6.0
     browser_timeout_s: float = 14.0  # a real page load in the user's session
+    web_timeout_s: float = 9.0  # search (~1s) plus reading listing pages (capped at 3s each)
     shortlist_size: int = 32
     verify_batch: int = 8
 
@@ -144,6 +145,7 @@ async def find(
     client: httpx.AsyncClient | None = None,
     profile: ItemProfile | None = None,
     city_slug: str = "sanfrancisco",
+    segment_override: str | None = None,
 ) -> AsyncIterator[dict]:
     fs = fs or FindSettings()
     cfg = cfg or default_settings()
@@ -172,7 +174,7 @@ async def find(
         yield {"type": "profile", "ms": ms(), "profile": profile.model_dump()}
 
         stats = RouterStats.load(fs.router_stats_file) if fs.router_stats_file.exists() else None
-        rt = route(profile, stats, load_shopify_stores(fs.shopify_stores_file))
+        rt = route(profile, stats, load_shopify_stores(fs.shopify_stores_file), segment_override)
         yield {"type": "route", "ms": ms(), "segment": rt.segment, "groups": rt.resale_groups}
         yield {"type": "handoff", "ms": ms(),
                "links": handoff_links(profile.exact_queries, profile.similar_queries, rt.segment, city_slug)}
@@ -209,10 +211,10 @@ async def find(
                 if not group:
                     continue
                 ws = WebSearchSource(f"web:{'+'.join(group)}", sources.web, domains=group, group="resale")
-                pending.add(asyncio.create_task(run(ws.name, ws.search(plan, client))))
+                pending.add(asyncio.create_task(run(ws.name, ws.search(plan, client), fs.web_timeout_s)))
             if profile.exact_queries:
                 retail = WebSearchSource("web:retail", sources.web, domains=[], group="retail")
-                pending.add(asyncio.create_task(run("web:retail", retail.search(plan, client))))
+                pending.add(asyncio.create_task(run("web:retail", retail.search(plan, client), fs.web_timeout_s)))
         for src in sources.extra:
             pending.add(asyncio.create_task(run(src.name, src.search(plan, client))))
 

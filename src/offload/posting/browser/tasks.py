@@ -36,6 +36,11 @@ PLATFORMS: dict[str, dict] = {
         "sell_url": "https://www.facebook.com/marketplace/create/item",
         "domains": ("facebook.com",),
     },
+    "facebook": {  # same as fbm; the name the connected-accounts flow uses
+        "home": "https://www.facebook.com/marketplace/",
+        "sell_url": "https://www.facebook.com/marketplace/create/item",
+        "domains": ("facebook.com",),
+    },
     "ebay": {  # browser fallback only; eBay selling should go through the official API adapter
         "home": "https://www.ebay.com/",
         "sell_url": "https://www.ebay.com/sl/sell",

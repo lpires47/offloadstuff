@@ -108,8 +108,9 @@ class WebSearchSource:
         async def read(h: _Hit) -> Listing:
             listing = None
             try:
-                listing = await fetch_listing(h.url, client, self.robots)
-            except httpx.HTTPError:
+                # A page that's slow to answer becomes a link, not a hold-up for everyone else.
+                listing = await asyncio.wait_for(fetch_listing(h.url, client, self.robots, timeout=2.5), 3.0)
+            except (httpx.HTTPError, asyncio.TimeoutError):
                 listing = None
             if listing is None:  # link-only result: we can show it, not price it
                 listing = Listing(

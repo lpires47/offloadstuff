@@ -357,3 +357,19 @@ def test_marketplace_handoff_links():
     assert url == "https://www.facebook.com/marketplace/sanfrancisco/search/?query=knoll+cesca+chair&maxPrice=400"
     links = handoff_links(["Knoll Cesca chair"], ["cantilever cane chair"], "furniture", "oakland")
     assert len(links) == 2 and "/marketplace/oakland/" in links[0]["url"]
+
+
+def test_sets_and_pairs_price_per_unit():
+    from offload.find.ladder import units_in_title
+
+    assert units_in_title("Pair of Cesca Armchairs by Marcel Breuer") == 2
+    assert units_in_title("1960s Set of Four Marcel Breuer Cesca Chairs") == 4
+    assert units_in_title("Set Six Marcel Breuer Cesca Chairs") == 1 or units_in_title("Set Six Marcel Breuer Cesca Chairs") == 6
+    assert units_in_title("Four Vintage 1970 Made in Italy Stamped Marcel Breuer Cesca Chairs") == 4
+    assert units_in_title("Cesca side chair by Marcel Breuer for Knoll (Price Per chair)") == 1
+    assert units_in_title("Knoll Cesca Armless Cane Chair") == 1
+    p = cesca()
+    items = [lst("Knoll Cesca Chair cane chrome", 40000, "https://a/1"), lst("Pair of Knoll Cesca Chair cane chrome", 80000, "https://a/2"),
+             lst("Knoll Cesca Chair cane chrome", 42000, "https://a/3"), lst("Set of 4 Knoll Cesca Chair cane chrome", 160000, "https://a/4")]
+    pre = L.preliminary(p, items)
+    assert pre.typical_used_cents in (40000, 41000, 42000)

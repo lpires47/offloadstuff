@@ -81,8 +81,9 @@ class Route:
     shopify_stores: list[str]
 
 
-def route(profile: ItemProfile, stats: RouterStats | None = None, shopify: dict[str, list[str]] | None = None) -> Route:
-    seg = segment(profile)
+def route(profile: ItemProfile, stats: RouterStats | None = None, shopify: dict[str, list[str]] | None = None,
+          segment_override: str | None = None) -> Route:
+    seg = segment_override if segment_override in PRIORS else segment(profile)
     prior = PRIORS[seg]
     if stats is not None:
         # Learned rate dominates once a site has real traffic; the prior order breaks ties.
