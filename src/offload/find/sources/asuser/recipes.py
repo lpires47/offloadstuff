@@ -31,11 +31,17 @@ class Recipe:
     notes: str = ""
 
     def search_url(self, q: str, city: str = "sanfrancisco") -> str:
-        return self.search.format(q=quote_plus(q), city=city)
+        return self.search.format(q=quote_plus(q), city=CITY_SLUGS.get(self.name, {}).get(city, city))
 
     def sold_url(self, q: str, city: str = "sanfrancisco") -> str | None:
         return self.sold.format(q=quote_plus(q), city=city) if self.sold else None
 
+
+# The same city, spelled the way each site wants it.
+CITY_SLUGS = {
+    "craigslist": {"sanfrancisco": "sfbay", "losangeles": "losangeles", "nyc": "newyork", "newyork": "newyork"},
+    "offerup": {"sanfrancisco": "San%20Francisco%2C%20CA", "losangeles": "Los%20Angeles%2C%20CA", "nyc": "New%20York%2C%20NY"},
+}
 
 FASHION = ("fashion", "menswear", "luxury", "sneakers", "general")
 HOME = ("furniture", "decor", "general")
@@ -61,7 +67,7 @@ RECIPES: dict[str, Recipe] = {r.name: r for r in [
     Recipe("therealreal", "therealreal.com", "https://www.therealreal.com/search?keywords={q}", r"/products/[^?#]+",
            ("luxury", "fashion"), xhr=("graphql",), embedded=("window.__NEXT_DATA__",)),
     Recipe("vestiaire", "vestiairecollective.com", "https://us.vestiairecollective.com/search/?q={q}",
-           r"/[a-z0-9-]+-\d+\.shtml", ("luxury", "fashion"), xhr=("/v1/product/search", "search.vestiairecollective")),
+           r"/[^?#]+-\d+\.shtml$", ("luxury", "fashion"), xhr=("/v1/product/search", "search.vestiairecollective")),
     Recipe("thredup", "thredup.com", "https://www.thredup.com/search?search_text={q}", r"/product/[^?#]+",
            ("fashion",), xhr=("graphql",)),
     Recipe("stockx", "stockx.com", "https://stockx.com/search?s={q}", r"^/[a-z0-9-]{8,}$", ("sneakers", "luxury"),
@@ -83,9 +89,9 @@ RECIPES: dict[str, Recipe] = {r.name: r for r in [
     Recipe("invaluable", "invaluable.com", "https://www.invaluable.com/search?query={q}&keyword={q}",
            r"/auction-lot/[^?#]+", HOME + ("luxury",), sold="https://www.invaluable.com/search?query={q}&keyword={q}&upcoming=false",
            xhr=("algolia.net",), login=True, notes="sold prices show when signed in"),
-    Recipe("offerup", "offerup.com", "https://offerup.com/search?q={q}", r"/item/detail/[^?#]+", FASHION + HOME,
+    Recipe("offerup", "offerup.com", "https://offerup.com/search?q={q}&location={city}", r"/item/detail/[^?#]+", FASHION + HOME,
            xhr=("graphql",)),
-    Recipe("craigslist", "craigslist.org", "https://{city}.craigslist.org/search/sss?query={q}", r"/d/[^?#]+\.html",
+    Recipe("craigslist", "craigslist.org", "https://{city}.craigslist.org/search/sss?query={q}", r"/view/d/[^?#]+|/d/[^?#]+\.html",
            HOME + ("general",)),
     Recipe("rubylane", "rubylane.com", "https://www.rubylane.com/search?q={q}", r"/item/[^?#]+", HOME + ("luxury",)),
     Recipe("etsy_web", "etsy.com", "https://www.etsy.com/search?q={q}&explicit=1&is_vintage=true", r"/listing/\d+",

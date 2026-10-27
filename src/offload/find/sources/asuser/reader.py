@@ -146,6 +146,12 @@ CARDS_JS = r"""
 }
 """
 
+COUNT_JS = r"""
+(pattern) => { const re = new RegExp(pattern); let n = 0;
+  for (const a of document.querySelectorAll('a[href]')) { try { if (re.test(new URL(a.href, location.href).pathname)) n++; } catch {} }
+  return n; }
+"""
+
 CHALLENGE_JS = r"""
 () => {
   const t = (document.title + ' ' + (document.body ? document.body.innerText.slice(0, 2000) : '')).toLowerCase();
@@ -155,6 +161,12 @@ CHALLENGE_JS = r"""
   return {login, human};
 }
 """
+
+
+TRACKERS = ("google-analytics.com", "googletagmanager.com", "doubleclick.net", "googlesyndication.com",
+            "amplitude.com", "launchdarkly.com", "segment.io", "segment.com", "hotjar", "fullstory", "sentry.io",
+            "datadoghq", "newrelic", "optimizely", "branch.io", "criteo", "pinterest.com/ct", "tiktok.com/i18n",
+            "bat.bing.com", "clarity.ms", "cookiebot", "privacymanager", "stripe.com/6", "/cdn-cgi/rum")
 
 
 @dataclass
@@ -173,7 +185,7 @@ class PacePolicy:
         self._last[key] = time.time()
 
 
-async def read_page(context, recipe: Recipe, url: str, *, timeout_s: float = 8.0) -> list[Listing]:
+async def read_page(context, recipe: Recipe, url: str, *, timeout_s: float = 12.0) -> list[Listing]:
     """Open the site's own search page in the user's session and collect the listings it shows."""
     captured: list = []
 
@@ -197,22 +209,34 @@ async def read_page(context, recipe: Recipe, url: str, *, timeout_s: float = 8.0
     page = await context.new_page()
     page.on("response", on_response)
 
-    async def light(route):  # skip heavy media; we read data, the user isn't watching this tab
-        if route.request.resource_type in ("image", "media", "font"):
+    async def light(route):  # skip heavy media and ad/analytics calls; we read data, nobody watches this tab
+        req = route.request
+        if req.resource_type in ("image", "media", "font") or any(t in req.url for t in TRACKERS):
             await route.abort()
         else:
             await route.fallback()  # let any context-level handler (or the network) take it
 
     await page.route("**/*", light)
     try:
-        await page.goto(url, wait_until="domcontentloaded", timeout=timeout_s * 1000)
-        try:
-            await page.wait_for_load_state("networkidle", timeout=min(4000, timeout_s * 500))
-        except Exception:  # noqa: BLE001 - busy pages never go idle; we read what's there
-            pass
+        resp = await page.goto(url, wait_until="domcontentloaded", timeout=timeout_s * 1000)
+        # Read as soon as results are on the page: the site's own data call has arrived, or enough
+        # listing links have rendered. Don't wait for the page to go quiet (busy pages never do).
+        deadline = time.time() + min(6.0, timeout_s * 0.75)
+        while time.time() < deadline:
+            if captured:
+                await asyncio.sleep(0.3)  # let sibling calls land
+                break
+            try:
+                n = await page.evaluate(COUNT_JS, recipe.item_path)
+            except Exception:  # noqa: BLE001 - mid-navigation
+                n = 0
+            if n >= 8:
+                break
+            await asyncio.sleep(0.25)
         state = await page.evaluate(CHALLENGE_JS)
-        if state["human"]:
-            raise NeedsUser(f"{recipe.name} wants a human check: continue in the live view")
+        blocked = resp is not None and resp.status in (401, 403, 429) and not captured
+        if state["human"] or blocked:
+            raise NeedsUser(f"{recipe.name} wants a human check or refused this browser: use your own signed-in browser")
         listings: list[Listing] = []
         for blob in captured:
             walk_listings(blob, recipe, listings)
@@ -230,9 +254,12 @@ async def read_page(context, recipe: Recipe, url: str, *, timeout_s: float = 8.0
                 got = parse_listing(f'<script type="application/ld+json">{block}</script>', url, recipe.name)
                 if got:
                     listings.append(got)
-        if not listings:
+        if len(listings) < 5:  # embedded data can hold just a promoted item or two: read the cards too
+            have = {urlparse(x.url).path.rstrip("/") for x in listings}
             for c in await page.evaluate(CARDS_JS, recipe.item_path):
-                listings.append(card_listing(recipe, c))
+                card = card_listing(recipe, c)
+                if urlparse(card.url).path.rstrip("/") not in have:
+                    listings.append(card)
         if not listings and state["login"] and recipe.login:
             raise NeedsUser(f"connect your {recipe.name} account to search it")
         return listings

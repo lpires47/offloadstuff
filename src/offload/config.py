@@ -7,6 +7,24 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 
+def load_dotenv(path: str | Path = ".env") -> None:
+    """Read KEY=value lines from .env into the environment (without overriding what's already set)."""
+    p = Path(path)
+    if not p.exists():
+        return
+    for line in p.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        value = value.split(" #", 1)[0].strip().strip('"').strip("'")
+        if key.strip() and value:
+            os.environ.setdefault(key.strip(), value)
+
+
+load_dotenv()
+
+
 def _env(name: str, default: str) -> str:
     value = os.environ.get(name, "").strip()
     return value or default
