@@ -30,6 +30,7 @@ def all_exact(req):
 
 def setup(monkeypatch, tmp_path, llm):
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(web, "ACCESS_TOKEN", "")
     items = [lst("Knoll Cesca Chair cane", 40000 + i * 2000, f"https://a/{i}") for i in range(6)]
     web._state.clear()
     web._state["llm"] = llm
@@ -84,3 +85,14 @@ def test_accounts_consent_flow(monkeypatch, tmp_path):
     assert rows["facebook"]["connected"] and rows["facebook"]["scopes"] == ["search"]
     client.delete("/api/accounts/facebook/consent")
     assert not {r["site"]: r for r in client.get("/api/accounts").json()["sites"]}["facebook"]["connected"]
+
+
+def test_private_link_gate(monkeypatch, tmp_path):
+    client = setup(monkeypatch, tmp_path, ScriptedLLM([]))
+    monkeypatch.setattr(web, "ACCESS_TOKEN", "secret")
+    assert client.get("/").status_code == 401
+    assert client.get("/api/health").status_code == 200
+    r = client.get("/?k=secret", follow_redirects=False)
+    assert r.status_code == 307 and "offload_k" in r.headers["set-cookie"]
+    client.cookies.set("offload_k", "secret")
+    assert client.get("/").status_code == 200
