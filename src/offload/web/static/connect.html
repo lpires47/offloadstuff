@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connect your account</title>
+<style>
+:root{--bg:#faf9f6;--fg:#1d1c1a;--muted:#6f6b64;--line:#e6e2da;--accent:#2f5d50}
+@media (prefers-color-scheme:dark){:root{--bg:#141412;--fg:#f0eee9;--muted:#a19c93;--line:#2c2a26;--accent:#8fc4b2}}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.4 -apple-system,system-ui,sans-serif}
+main{max-width:480px;margin:0 auto;padding:12px 16px 40px}
+h1{font-size:18px;margin:4px 0}.muted{color:var(--muted);font-size:13px}
+canvas{width:100%;border:1px solid var(--line);border-radius:12px;background:#fff;touch-action:manipulation;margin:10px 0}
+.row{display:flex;gap:8px}input{flex:1;padding:11px;border:1px solid var(--line);border-radius:10px;font:inherit;background:transparent;color:var(--fg)}
+button{padding:11px 14px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--fg);font:inherit}
+button.primary{background:var(--accent);color:var(--bg);border-color:var(--accent);font-weight:600;width:100%;margin-top:10px}
+</style></head><body><main>
+<h1 id="title">Connect</h1>
+<div class="muted">This is the agent's browser. Sign in yourself: tap the page, type below. We keep your signed-in session, never your password. Turn it off any time in Accounts.</div>
+<canvas id="screen"></canvas>
+<div class="row"><input id="text" placeholder="Type into the selected field" autocomplete="off" autocapitalize="off"><button id="send">Type</button><button id="enter">⏎</button></div>
+<div class="row" style="margin-top:8px"><button id="back">Back</button><button id="down">Scroll ↓</button><button id="up">Scroll ↑</button></div>
+<button class="primary" id="done">I'm signed in</button>
+<div class="muted" id="status" style="margin-top:8px"></div>
+</main><script>
+const site = location.pathname.split("/").pop();
+document.getElementById("title").textContent = "Connect " + site;
+const ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws/connect/" + site);
+const c = document.getElementById("screen"), g = c.getContext("2d"); let dims = {w: 430, h: 860};
+const img = new Image();
+ws.onmessage = e => { const m = JSON.parse(e.data);
+  if (m.img) { dims = {w: m.w, h: m.h}; img.onload = () => { c.width = img.width; c.height = img.height; g.drawImage(img, 0, 0); }; img.src = "data:image/jpeg;base64," + m.img; }
+  if (m.connected) { document.getElementById("status").textContent = "Connected. You can close this page."; setTimeout(() => location.href = "/", 1200); }
+  if (m.error) document.getElementById("status").textContent = m.error; };
+ws.onclose = () => document.getElementById("status").textContent ||= "Disconnected.";
+const send = o => ws.readyState === 1 && ws.send(JSON.stringify(o));
+c.addEventListener("click", e => { const r = c.getBoundingClientRect();
+  send({type: "click", x: (e.clientX - r.left) / r.width * dims.w, y: (e.clientY - r.top) / r.height * dims.h}); });
+document.getElementById("send").onclick = () => { const t = document.getElementById("text"); send({type: "type", text: t.value}); t.value = ""; };
+document.getElementById("text").addEventListener("keydown", e => { if (e.key === "Enter") { document.getElementById("send").click(); send({type: "key", key: "Enter"}); } });
+document.getElementById("enter").onclick = () => send({type: "key", key: "Enter"});
+document.getElementById("back").onclick = () => send({type: "back"});
+document.getElementById("down").onclick = () => send({type: "scroll", dy: 500});
+document.getElementById("up").onclick = () => send({type: "scroll", dy: -500});
+document.getElementById("done").onclick = () => send({type: "done", scopes: ["search", "list"]});
+</script></body></html>

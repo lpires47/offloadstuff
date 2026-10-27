@@ -3,121 +3,141 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Find it</title>
+<title>Offload tests</title>
 <style>
 :root{--bg:#faf9f6;--fg:#1d1c1a;--muted:#6f6b64;--line:#e6e2da;--card:#fff;--accent:#2f5d50;--good:#2f7a4a;--high:#a5462f;--chip:#efece5}
 @media (prefers-color-scheme:dark){:root{--bg:#141412;--fg:#f0eee9;--muted:#a19c93;--line:#2c2a26;--card:#1d1c19;--accent:#8fc4b2;--good:#7fcf98;--high:#e6957f;--chip:#2a2824}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 -apple-system,BlinkMacSystemFont,"Inter",system-ui,sans-serif}
 main{max-width:760px;margin:0 auto;padding:16px 16px 80px}
-h1{font-size:22px;margin:4px 0 12px;letter-spacing:-.01em}h2{font-size:15px;margin:22px 0 8px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-.tabs{display:flex;gap:8px;margin-bottom:14px}.tabs button{flex:1}
-button,.btn{appearance:none;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:12px;padding:12px 14px;font:inherit;cursor:pointer}
+h1{font-size:22px;margin:4px 0 6px;letter-spacing:-.01em}h2{font-size:13px;margin:22px 0 8px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.lede{color:var(--muted);font-size:14px;margin:0 0 12px}
+.tabs{display:flex;gap:6px;margin:10px 0 14px;overflow-x:auto}.tabs button{flex:1;min-width:max-content}
+button{appearance:none;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:12px;padding:11px 13px;font:inherit;cursor:pointer}
 button.primary{background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:600}
-button[aria-pressed=true]{border-color:var(--fg);font-weight:600}
+button[aria-pressed=true]{border-color:var(--fg);font-weight:600}button:disabled{opacity:.5}
 .row{display:flex;gap:8px;align-items:center}input[type=text],input[type=number],textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--fg);font:inherit}
 label.cam{display:flex;align-items:center;justify-content:center;gap:8px;border:1.5px dashed var(--line);border-radius:14px;padding:22px;color:var(--muted);cursor:pointer;margin-bottom:10px}
 label.cam input{display:none}.thumbs{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.thumbs img{width:64px;height:64px;object-fit:cover;border-radius:8px}
 .status{color:var(--muted);font-size:13px;min-height:18px;margin:10px 0}
-.profile{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:10px}
-.profile .what{font-weight:600;font-size:17px}.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.chip{background:var(--chip);border-radius:999px;padding:4px 10px;font-size:13px}.chip.must{outline:1.5px solid var(--accent)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;text-decoration:none;color:inherit}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:10px}
+.what{font-weight:600;font-size:17px}.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.chip{background:var(--chip);border-radius:999px;padding:4px 10px;font-size:13px;color:var(--fg);text-decoration:none}.chip.must{outline:1.5px solid var(--accent)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;text-decoration:none;color:inherit}
 .card img{width:100%;aspect-ratio:1;object-fit:cover;background:var(--chip)}.card .b{padding:8px 10px 10px;display:flex;flex-direction:column;gap:3px}
 .card .t{font-size:13px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .price{font-weight:650}.src{font-size:12px;color:var(--muted)}.why{font-size:12px;color:var(--muted)}
 .badge{font-size:11px;font-weight:600;border-radius:6px;padding:1px 6px;width:fit-content}.badge.good_price{color:var(--good);background:color-mix(in srgb,var(--good) 14%,transparent)}.badge.high{color:var(--high);background:color-mix(in srgb,var(--high) 14%,transparent)}.badge.typical{color:var(--muted);background:var(--chip)}
-.empty{color:var(--muted);font-size:14px}.ebay{margin-top:26px;padding:4px 12px 14px;border:1px solid var(--line);border-radius:16px;background:color-mix(in srgb,var(--chip) 50%,transparent)}.prelim{opacity:.7}
-.signoff{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:12px}
-.signoff .k{font-size:12px;color:var(--muted);margin-bottom:4px}.flag{color:var(--high);font-size:13px}
+.empty{color:var(--muted);font-size:14px}.prelim{opacity:.7}.ebay{margin-top:26px;padding:4px 12px 14px;border:1px solid var(--line);border-radius:16px}
+.k{font-size:12px;color:var(--muted);margin-bottom:4px}.flag{color:var(--high);font-size:13px}
+.pilewrap{position:relative}.pilewrap img{width:100%;border-radius:14px;display:block}.pilebox{position:absolute;border:2px solid var(--accent);border-radius:6px}
+.pilebox span{position:absolute;top:-10px;left:-10px;background:var(--accent);color:var(--bg);font-size:12px;font-weight:700;border-radius:999px;width:20px;height:20px;display:grid;place-items:center}
+.plat{display:flex;flex-wrap:wrap;gap:6px}.plat label{border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:13px}
 [hidden]{display:none!important}
 </style>
 </head>
 <body>
 <main>
   <h1 id="title">Find it</h1>
+  <p class="lede" id="lede"></p>
   <div class="tabs" role="tablist">
-    <button id="tab-find" aria-pressed="true">Find</button>
-    <button id="tab-sell" aria-pressed="false">Sell</button>
-    <button id="tab-accounts" aria-pressed="false">Accounts</button>
+    <button data-tab="find" aria-pressed="true">Find</button>
+    <button data-tab="furniture">Furniture</button>
+    <button data-tab="sell">Sell</button>
+    <button data-tab="pile">Pile</button>
+    <button data-tab="accounts">Accounts</button>
   </div>
 
   <section id="find">
-    <label class="cam">📷 Take or choose a photo<input id="find-photo" type="file" accept="image/*" capture="environment" multiple></label>
+    <label class="cam">📷 Take or choose a photo<input id="find-photo" type="file" accept="image/*" multiple></label>
     <div class="thumbs" id="find-thumbs"></div>
-    <div class="row"><input id="find-text" type="text" placeholder="…or describe it: “Cesca chair, cane seat, under $400”"><button class="primary" id="find-go">Find</button></div>
+    <div class="row"><input id="find-text" type="text" placeholder="…or describe it"><button class="primary" id="find-go">Find</button></div>
     <div class="status" id="find-status"></div>
     <div id="find-profile"></div>
     <div id="ladder"></div>
   </section>
 
-  <section id="accounts" hidden>
-    <p class="src">Connect the sites you use. We search them as you, in your own session, only where you allow it. You can turn any of them off at any time.</p>
-    <div id="account-list"></div>
-  </section>
-
   <section id="sell" hidden>
-    <label class="cam">📷 Photos of the item (front, tag, details)<input id="sell-photo" type="file" accept="image/*" capture="environment" multiple></label>
+    <label class="cam">📷 Photos of the item (front, tag, details)<input id="sell-photo" type="file" accept="image/*" multiple></label>
     <div class="thumbs" id="sell-thumbs"></div>
     <button class="primary" id="sell-go" style="width:100%">Make my listing</button>
     <div class="status" id="sell-status"></div>
     <div id="signoff"></div>
+  </section>
+
+  <section id="pile" hidden>
+    <label class="cam">📷 One photo of a pile, shelf or room<input id="pile-photo" type="file" accept="image/*"></label>
+    <button class="primary" id="pile-go" style="width:100%">Find everything in it</button>
+    <div class="status" id="pile-status"></div>
+    <div class="pilewrap" id="pile-view"></div>
+    <div id="pile-items"></div>
+  </section>
+
+  <section id="accounts" hidden>
+    <div id="account-list"></div>
   </section>
 </main>
 <script>
 const $ = s => document.querySelector(s);
 const money = c => c == null ? "—" : "$" + Math.round(c / 100).toLocaleString();
 const esc = s => String(s ?? "").replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
-let run = null, segment = null;
+let run = null, segment = null, scope = null;
+const LEDE = {
+  find: "Photo or words → the exact item new, the exact item used everywhere, then pieces with the same defining details.",
+  furniture: "Same, for furniture and decor: the exact design, vintage and new, and pieces that keep what makes it special.",
+  sell: "Photo → a finished listing with a market price and a hidden minimum. One sign-off lists it everywhere you choose.",
+  pile: "One photo of a pile → every item found, each with its own listing and price.",
+  accounts: "Connect the sites you use. The agent searches and lists as you, in your own session, only where you allow it.",
+};
 
 function tab(name){
-  for (const t of ["find","sell","accounts"]) { $("#"+t).hidden = t !== name; $("#tab-"+t).setAttribute("aria-pressed", t === name); }
-  $("#title").textContent = {find: "Find it", sell: "Sell it", accounts: "Your accounts"}[name];
+  document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-pressed", b.dataset.tab === name));
+  const sec = name === "furniture" ? "find" : name;
+  for (const s of ["find","sell","pile","accounts"]) $("#"+s).hidden = s !== sec;
+  scope = name === "furniture" ? "furniture" : null;
+  $("#title").textContent = {find: "Find it", furniture: "Find furniture", sell: "Sell it", pile: "Pile → listings", accounts: "Your accounts"}[name];
+  $("#lede").textContent = LEDE[name];
   if (name === "accounts") loadAccounts();
 }
-$("#tab-find").onclick = () => tab("find"); $("#tab-sell").onclick = () => tab("sell"); $("#tab-accounts").onclick = () => tab("accounts");
-
-async function loadAccounts(){
-  const d = await (await fetch("/api/accounts")).json();
-  $("#account-list").innerHTML = d.sites.map(r => `<div class="row" style="justify-content:space-between;border-bottom:1px solid var(--line);padding:10px 0">
-    <div><div>${esc(r.domain)}</div><div class="src">${r.connected ? "Searching as you" : (r.needs_login ? "Sign in to connect" : "Off")}${r.notes ? " · " + esc(r.notes) : ""}</div></div>
-    <button data-site="${esc(r.site)}" data-on="${r.connected}">${r.connected ? "Turn off" : "Connect"}</button></div>`).join("");
-}
-$("#account-list").addEventListener("click", async e => {
-  const b = e.target.closest("button[data-site]"); if (!b) return;
-  const site = b.dataset.site;
-  if (b.dataset.on === "true") { await fetch(`/api/accounts/${site}/consent`, {method: "DELETE"}); return loadAccounts(); }
-  const c = await (await fetch(`/api/accounts/${site}/connect`, {method: "POST"})).json();
-  if (c.live_view) window.open(c.live_view, "_blank");
-  if (confirm(`Allow searching ${site} as you?`)) await fetch(`/api/accounts/${site}/consent`, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({scopes: ["search"]})});
-  loadAccounts();
-});
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => tab(b.dataset.tab));
+tab(new URLSearchParams(location.search).get("tab") || "find");
 
 function thumbs(input, box){ input.onchange = () => { box.innerHTML = ""; for (const f of input.files) { const i = new Image(); i.src = URL.createObjectURL(f); box.append(i); } }; }
 thumbs($("#find-photo"), $("#find-thumbs")); thumbs($("#sell-photo"), $("#sell-thumbs"));
 
+async function* ndjson(res){
+  const reader = res.body.getReader(), dec = new TextDecoder(); let buf = "";
+  for (;;) { const {value, done} = await reader.read(); if (done) break;
+    buf += dec.decode(value, {stream: true}); let nl;
+    while ((nl = buf.indexOf("\n")) >= 0) { const line = buf.slice(0, nl); buf = buf.slice(nl + 1); if (line.trim()) yield JSON.parse(line); } }
+}
+
 function profileView(p){
   const what = [p.brand, p.model_name, p.variant].filter(Boolean).join(" ") || p.subcategory;
   const by = p.designer ? ` · ${esc(p.designer)}` : ""; const era = p.era ? ` · ${esc(p.era)}` : "";
-  return `<div class="profile"><div class="what">${esc(what)}</div><div class="src">${esc(p.subcategory)}${by}${era}</div>
-    <div class="chips">${p.defining_details.map(d => `<span class="chip ${d.must_match ? "must" : ""}" title="${esc(d.why)}">${esc(d.detail)}</span>`).join("")}</div></div>`;
+  const attrs = (p.attributes || []).filter(a => a.value && a.confidence >= .6).slice(0, 8).map(a => `<span class="chip">${esc(a.name)}: ${esc(a.value)}</span>`).join("");
+  return `<div class="box"><div class="what">${esc(what)}</div><div class="src">${esc(p.subcategory)}${by}${era}</div>
+    <div class="chips">${p.defining_details.map(d => `<span class="chip ${d.must_match ? "must" : ""}" title="${esc(d.why)}">${esc(d.detail)}</span>`).join("")}</div>
+    ${attrs ? `<div class="chips">${attrs}</div>` : ""}<div id="handoff"></div></div>`;
 }
 
 function card(r){
   const l = r.listing, img = l.image_urls[0] ? `<img loading="lazy" src="${esc(l.image_urls[0])}" alt="">` : `<img alt="">`;
   const badge = r.price_badge ? `<span class="badge ${r.price_badge}">${{good_price:"Good price",typical:"Typical price",high:"High"}[r.price_badge]}</span>` : "";
+  const qty = l.quantity > 1 ? ` <span class="src">(${l.quantity} · ${money(Math.round(l.price_cents / l.quantity))} each)</span>` : "";
   return `<a class="card" href="${esc(l.url)}" target="_blank" rel="noopener" data-src="${esc(l.source)}" data-rung="${r.rung}">${img}
-    <div class="b"><div class="t">${esc(l.title)}</div><div class="row" style="gap:6px"><span class="price">${money(l.price_cents)}</span>${badge}</div>
-    <div class="src">${esc(l.source.replace("shopify:",""))}</div><div class="why">${esc(r.reason)}</div></div></a>`;
+    <div class="b"><div class="t">${esc(l.title)}</div><div class="row" style="gap:6px;flex-wrap:wrap"><span class="price">${money(l.price_cents)}</span>${qty}${badge}</div>
+    <div class="src">${esc(l.source.replace("shopify:",""))}${l.location ? " · " + esc(l.location) : ""}</div><div class="why">${esc(r.reason)}</div></div></a>`;
 }
 
 function ladderView(L, stage){
+  const fin = stage === "final";
   const sec = (name, items, none, extra = "") => `<h2>${name}${items.length ? ` · ${items.length}` : ""}${extra}</h2>` +
-    (items.length ? `<div class="grid">${items.map(card).join("")}</div>` : `<div class="empty">${none}</div>`);
-  const typical = L.typical_used_cents ? ` · typically ${money(L.typical_used_cents)}` : "";
-  return `<div class="${stage === "final" ? "" : "prelim"}">` +
-    sec("The exact item, new", L.exact_new, stage === "final" ? "Not found new right now." : "Searching…") +
-    sec("The exact item, used", L.exact_used, stage === "final" ? "No used listings of this exact item right now." : "Searching…", typical) +
-    sec("Similar", L.similar, stage === "final" ? "Nothing close enough yet." : "Searching…") +
+    (items.length ? `<div class="grid">${items.map(card).join("")}</div>` : `<div class="empty">${fin ? none : "Searching…"}</div>`);
+  const typical = L.typical_used_cents ? ` · typically ${money(L.typical_used_cents)} each` : "";
+  return `<div class="${fin ? "" : "prelim"}">` +
+    sec("The exact item, new", L.exact_new, "Not found new right now.") +
+    sec("The exact item, used", L.exact_used, "No used listings of this exact item right now.", typical) +
+    sec("Similar", L.similar, "Nothing close enough yet.") +
     ((L.sold || []).length ? `<h2>Recently sold · ${L.sold.length}</h2><div class="grid">${L.sold.map(r => card({...r, reason: "Sold" + (r.listing.sold_on ? " " + r.listing.sold_on : "")})).join("")}</div>` : "") +
     ((L.ebay || []).length ? `<div class="ebay"><h2>On eBay · ${L.ebay.length}</h2><div class="grid">${L.ebay.map(r => card({...r, reason: {exact_new: "Exact item, new", exact_used: "Exact item, used", similar: "Similar"}[r.rung]})).join("")}</div></div>` : "") + `</div>`;
 }
@@ -130,50 +150,102 @@ $("#ladder").addEventListener("click", e => {
 $("#find-go").onclick = async () => {
   const fd = new FormData(); for (const f of $("#find-photo").files) fd.append("photos", f);
   const text = $("#find-text").value.trim(); if (text) fd.append("text", text);
+  if (scope) fd.append("scope", scope);
   if (!fd.has("photos") && !text) return;
   $("#find-profile").innerHTML = ""; $("#ladder").innerHTML = ""; const status = $("#find-status");
-  status.textContent = "Looking closely…"; const sources = [];
+  status.textContent = "Looking closely…"; const seen = []; const needs = [];
   const res = await fetch("/api/find", {method: "POST", body: fd});
   if (!res.ok) { status.textContent = "Something went wrong (" + res.status + ")."; return; }
-  const reader = res.body.getReader(), dec = new TextDecoder(); let buf = "";
-  for (;;) {
-    const {value, done} = await reader.read(); if (done) break;
-    buf += dec.decode(value, {stream: true}); let nl;
-    while ((nl = buf.indexOf("\n")) >= 0) {
-      const ev = JSON.parse(buf.slice(0, nl)); buf = buf.slice(nl + 1);
-      run = ev.run || run; segment = ev.segment || segment;
-      if (ev.type === "profile") { $("#find-profile").innerHTML = profileView(ev.profile); status.textContent = "Searching stores and resale sites…"; }
-      if (ev.type === "handoff" && ev.links.length) { $("#find-profile").insertAdjacentHTML("beforeend", `<div class="chips" style="margin-top:10px">${ev.links.map(l => `<a class="chip" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)} ↗</a>`).join("")}</div>`); }
-      if (ev.type === "source") { sources.push(ev.needs_user ? `${ev.source.split(":").pop()}: connect in Accounts` : ev.error ? `${ev.source} ✕` : `${ev.source.split(":").pop()} ${ev.count}`); status.textContent = `Searched: ${sources.join(" · ")}`; }
-      if (ev.type === "ladder") { $("#ladder").innerHTML = ladderView(ev.ladder, ev.stage); if (ev.stage === "final") status.textContent = `Done in ${(ev.ms/1000).toFixed(1)}s · ${ev.ladder.sources_searched.length} sources`; else status.textContent = "Checking which ones are the exact item…"; }
-      if (ev.type === "error") status.textContent = "Error: " + ev.message;
-    }
+  for await (const ev of ndjson(res)) {
+    run = ev.run || run; segment = ev.segment || segment;
+    if (ev.type === "profile") { $("#find-profile").innerHTML = profileView(ev.profile); status.textContent = "Searching everywhere…"; }
+    if (ev.type === "handoff" && ev.links.length) { const h = $("#handoff"); if (h) h.innerHTML = `<div class="chips" style="margin-top:10px">${ev.links.map(l => `<a class="chip" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)} ↗</a>`).join("")}</div>`; }
+    if (ev.type === "source") { const n = ev.source.split(":").pop();
+      if (ev.needs_user) needs.push(n); else seen.push(ev.error ? `${n} ✕` : `${n} ${ev.count}`);
+      status.textContent = `Searched: ${seen.join(" · ")}${needs.length ? ` · connect ${needs.join(", ")} in Accounts` : ""}`; }
+    if (ev.type === "ladder") { $("#ladder").innerHTML = ladderView(ev.ladder, ev.stage);
+      status.textContent = ev.stage === "final" ? `Done in ${(ev.ms/1000).toFixed(1)}s · ${seen.join(" · ")}` : "Checking which ones are the exact item…"; }
+    if (ev.type === "error") status.textContent = "Error: " + ev.message;
   }
 };
+
+const PLATFORMS = ["facebook", "poshmark", "mercari", "depop", "vinted", "grailed"];
+function signoffView(b, id){
+  const d = b.draft;
+  const asks = (b.photo_requests || []).map(r => `<li>${esc(r.reason)}</li>`).join("");
+  const flags = (b.flagged_fields || []).length ? `<div class="flag">Please check: ${b.flagged_fields.map(esc).join(", ")}</div>` : "";
+  if (!d) return `<div class="box">${flags}<div>${esc(b.price_note)}</div>${asks ? `<ul>${asks}</ul>` : ""}</div>`;
+  const attrs = Object.entries(d.attributes).map(([k,v]) => `<span class="chip">${esc(k)}: ${esc(v)}</span>`).join("");
+  const plats = (d.platforms || []).slice(0, 5).map(p => `<div class="src">${esc(p.platform)}: list ${money(p.list_cents)} · sells ~${money(p.expected_sale_cents)} · you net ${money(p.expected_net_cents)} · ${Math.round(p.p_sold_30*100)}% in 30 days</div>`).join("");
+  const why = (d.price_notes || []).map(n => `<li>${esc(n)}</li>`).join("");
+  return `<div class="box" data-run="${esc(b.run || id)}">
+    ${asks ? `<div><div class="k">One more photo would help</div><ul>${asks}</ul></div>` : ""}${flags}
+    <div class="k">Title</div><input type="text" name="title" value="${esc(d.title)}">
+    <div class="row" style="margin-top:10px"><div style="flex:1"><div class="k">List price</div><input type="number" name="price" value="${Math.round(d.price_cents/100)}"></div>
+      <div style="flex:1"><div class="k">Hidden minimum</div><input type="number" name="floor" value="${Math.round(d.hidden_minimum_cents/100)}"></div></div>
+    <div class="src" style="margin-top:6px">Worth about ${money(d.value_cents)} · range ${money(d.range_cents[0])}–${money(d.range_cents[1])} · ${esc(d.price_confidence)} confidence${d.median_days ? ` · about ${d.median_days} days to sell` : ""}</div>
+    <details style="margin-top:6px"><summary class="src">Why this price</summary><ul class="src">${why}</ul>${plats}</details>
+    <div class="k" style="margin-top:10px">Details</div><div class="chips">${attrs}<span class="chip">condition: ${esc(d.condition)}</span></div>
+    <div class="k" style="margin-top:10px">Description</div><textarea name="desc" rows="4">${esc(d.description)}</textarea>
+    <div class="k" style="margin-top:10px">List on</div>
+    <div class="plat">${PLATFORMS.map(p => `<label><input type="checkbox" name="plat" value="${p}" ${["facebook","poshmark","mercari"].includes(p) ? "checked" : ""}> ${p}</label>`).join("")}</div>
+    <button class="primary" data-act="prepare" style="width:100%;margin-top:10px">Prepare listings (stops before Publish)</button>
+    <button data-act="live" style="width:100%;margin-top:8px">Approve and publish everywhere</button>
+    <div class="status" data-out></div></div>`;
+}
+
+document.addEventListener("click", async e => {
+  const btn = e.target.closest("button[data-act]"); if (!btn) return;
+  const box = btn.closest(".box"), out = box.querySelector("[data-out]");
+  const platforms = [...box.querySelectorAll("input[name=plat]:checked")].map(i => i.value);
+  if (btn.dataset.act === "live" && !confirm(`Publish on ${platforms.join(", ")} as you?`)) return;
+  out.textContent = btn.dataset.act === "live" ? "Publishing as you…" : "Filling in each listing as you; stopping before Publish…";
+  const body = {run: box.dataset.run, platforms, live: btn.dataset.act === "live",
+    title: box.querySelector("[name=title]").value, description: box.querySelector("[name=desc]").value,
+    price_cents: Math.round(+box.querySelector("[name=price]").value * 100), hidden_minimum_cents: Math.round(+box.querySelector("[name=floor]").value * 100)};
+  const r = await (await fetch("/api/sell/publish", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)})).json();
+  out.innerHTML = (r.results || []).map(x => `<div>${esc(x.platform)}: ${esc(x.status.replaceAll("_", " "))}${x.url ? ` · <a href="${esc(x.url)}" target="_blank">open</a>` : ""}${x.message ? " · " + esc(x.message) : ""}</div>`).join("") || esc(JSON.stringify(r));
+});
 
 $("#sell-go").onclick = async () => {
   const fd = new FormData(); for (const f of $("#sell-photo").files) fd.append("photos", f);
   if (!fd.has("photos")) return;
-  const status = $("#sell-status"); status.textContent = "Reading the item and checking the market…"; $("#signoff").innerHTML = "";
-  const res = await fetch("/api/sell", {method: "POST", body: fd});
+  const status = $("#sell-status"); status.textContent = "Reading the item and checking the market everywhere…"; $("#signoff").innerHTML = "";
+  const t = Date.now(); const res = await fetch("/api/sell", {method: "POST", body: fd});
   if (!res.ok) { status.textContent = "Something went wrong (" + res.status + ")."; return; }
-  const b = await res.json(); status.textContent = "";
-  const d = b.draft;
-  const asks = b.photo_requests.map(r => `<li>${esc(r.reason)}</li>`).join("");
-  const flags = b.flagged_fields.length ? `<div class="flag">Please check: ${b.flagged_fields.map(esc).join(", ")}</div>` : "";
-  if (!d) { $("#signoff").innerHTML = `<div class="signoff">${flags}<div>${esc(b.price_note)}</div>${asks ? `<ul>${asks}</ul>` : ""}</div>`; return; }
-  const attrs = Object.entries(d.attributes).map(([k,v]) => `<span class="chip">${esc(k)}: ${esc(v)}</span>`).join("");
-  $("#signoff").innerHTML = `<div class="signoff">
-    ${asks ? `<div><div class="k">One more photo would help</div><ul>${asks}</ul></div>` : ""}${flags}
-    <div><div class="k">Title</div><input type="text" value="${esc(d.title)}"></div>
-    <div class="row"><div style="flex:1"><div class="k">List price</div><input type="number" value="${Math.round(d.price_cents/100)}"></div>
-      <div style="flex:1"><div class="k">Hidden minimum (never shown)</div><input type="number" value="${Math.round(d.hidden_minimum_cents/100)}"></div></div>
-    <div class="src">Expected ${money(d.expected_cents)} · range ${money(d.range_cents[0])}–${money(d.range_cents[1])} · ${esc(d.price_confidence)} confidence. ${d.price_notes.map(esc).join(" ")}</div>
-    <div><div class="k">Details</div><div class="chips">${attrs}<span class="chip">condition: ${esc(d.condition)}</span></div></div>
-    <div><div class="k">Description</div><textarea rows="4">${esc(d.description)}</textarea></div>
-    <div><div class="k">Priced from</div>${d.comps.map(c => `<div class="src"><a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.title)}</a> · ${money(c.price_cents)}</div>`).join("") || '<div class="src">Retail price and condition</div>'}</div>
-    <button class="primary" disabled title="Publishing turns on once eBay approves our developer account">Approve and list everywhere</button></div>`;
+  const b = await res.json(); status.textContent = `Ready in ${((Date.now()-t)/1000).toFixed(1)}s`;
+  $("#signoff").innerHTML = signoffView(b);
 };
+
+$("#pile-go").onclick = async () => {
+  const f = $("#pile-photo").files[0]; if (!f) return;
+  const fd = new FormData(); fd.append("photo", f);
+  const view = $("#pile-view"), items = $("#pile-items"), status = $("#pile-status");
+  view.innerHTML = `<img src="${URL.createObjectURL(f)}" alt="">`; items.innerHTML = ""; status.textContent = "Finding every item…";
+  const res = await fetch("/api/pile", {method: "POST", body: fd});
+  for await (const ev of ndjson(res)) {
+    if (ev.type === "item") {
+      if (ev.box) { const [x0,y0,x1,y1] = ev.box; view.insertAdjacentHTML("beforeend", `<div class="pilebox" style="left:${x0/10}%;top:${y0/10}%;width:${(x1-x0)/10}%;height:${(y1-y0)/10}%"><span>${ev.index+1}</span></div>`); }
+      items.insertAdjacentHTML("beforeend", `<div class="box" id="pile-${ev.index}"><div class="what">${ev.index+1}. ${esc(ev.what)}</div><div class="src">Pricing…</div></div>`);
+      status.textContent = `Found ${ev.index+1} so far…`;
+    }
+    if (ev.type === "found") status.textContent = `${ev.count} items found${ev.skipped.length ? ` (skipped: ${ev.skipped.join(", ")})` : ""}. Pricing each…`;
+    if (ev.type === "draft") { const el = $("#pile-" + ev.index); if (el) el.outerHTML = `<div id="pile-${ev.index}"><div class="k" style="margin-top:14px">${ev.index+1}. ${esc([ev.identity.brand, ev.identity.model].filter(Boolean).join(" ") || ev.identity.subcategory)}</div>${signoffView(ev, ev.run)}</div>`; }
+    if (ev.type === "done") status.textContent = `Done in ${(ev.ms/1000).toFixed(1)}s`;
+    if (ev.type === "error") status.textContent = "Error: " + ev.message;
+  }
+};
+
+async function loadAccounts(){
+  const d = await (await fetch("/api/accounts")).json();
+  $("#account-list").innerHTML = d.sites.map(r => `<div class="row" style="justify-content:space-between;border-bottom:1px solid var(--line);padding:10px 0">
+    <div><div>${esc(r.domain)}</div><div class="src">${r.connected ? "Connected: " + r.scopes.join(", ") : "Not connected"}</div></div>
+    <div class="row">${r.connected ? `<button data-off="${esc(r.site)}">Turn off</button>` : `<a class="chip" href="/connect/${esc(r.site)}">Connect</a>`}</div></div>`).join("");
+}
+$("#account-list").addEventListener("click", async e => {
+  const b = e.target.closest("button[data-off]"); if (!b) return;
+  await fetch(`/api/accounts/${b.dataset.off}/consent`, {method: "DELETE"}); loadAccounts();
+});
 </script>
 </body>
 </html>
